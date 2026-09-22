@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">HelpPet</string>
+    <string name="welcome_title">Bem-vindo(a) ao\nHelpPet!</string>
+    <string name="welcome_subtitle">Ajude um pet a encontrar\nseu caminho.</string>
+    <string name="email_hint">E-mail</string>
+    <string name="password_hint">Senha</string>
+    <string name="login_button">Entrar</string>
+    <string name="or_continue_with">ou continue com</string>
+    <string name="no_account_prompt">Não tem uma conta? </string>
+    <string name="sign_up">Cadastre-se</string>
+    <string name="error_invalid_email">Insira um e-mail válido</string>
+    <string name="error_empty_password">A senha não pode ficar em branco</string>
+</resources>
