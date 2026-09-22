@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_offwhite">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Topo com Logo e Notificação -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="HelpPet"
+                    android:textColor="@color/primary_green"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:contentDescription="Notificações"
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/primary_green" />
+            </RelativeLayout>
+
+            <!-- Saudação -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Olá!"
+                android:textColor="@color/text_primary"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Juntos podemos ajudar\nmais pets."
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp" />
+
+            <!-- Botão 1: Perdi um animal -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:layout_marginTop="24dp"
+                app:cardBackgroundColor="#FCE8E6"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="20dp">
+
+                    <FrameLayout
+                        android:id="@+id/circle1"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_centerVertical="true">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_circle_red" />
+
+                        <ImageView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_perdi_alert"
+                            app:tint="@android:color/white" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toEndOf="@id/circle1"
+                        android:layout_marginStart="16dp"
+                        android:text="Perdi um animal"
+                        android:textColor="#C53929"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:text="›"
+                        android:textColor="#C53929"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Botão 2: Encontrei um animal -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#E6F4EA"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="20dp">
+
+                    <FrameLayout
+                        android:id="@+id/circle2"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_centerVertical="true">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_circle_green" />
+
+                        <ImageView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_encontrei_pet"
+                            app:tint="@android:color/white" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toEndOf="@id/circle2"
+                        android:layout_marginStart="16dp"
+                        android:text="Encontrei um animal"
+                        android:textColor="@color/primary_green"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:text="›"
+                        android:textColor="@color/primary_green"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Botão 3: Quero adotar -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#FEF7E0"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="20dp">
+
+                    <FrameLayout
+                        android:id="@+id/circle3"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_centerVertical="true">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_circle_orange" />
+
+                        <ImageView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_adotar"
+                            app:tint="@android:color/white" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toEndOf="@id/circle3"
+                        android:layout_marginStart="16dp"
+                        android:text="Quero adotar"
+                        android:textColor="#B06000"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:text="›"
+                        android:textColor="#B06000"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Título da Lista -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:text="Últimos animais cadastrados"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- Lista de Animais Recentes -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <!-- Animal 1: Luna -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="110dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/golden"
+                            android:contentDescription="Luna" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Luna"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="#FCE8E6"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:paddingBottom="2dp"
+                            android:text="Desaparecido"
+                            android:textColor="#C53929"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Recife • 2 km"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Animal 2: Mimi -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="110dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/gato"
+                            android:contentDescription="Mimi" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Mimi"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="#E6F4EA"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:paddingBottom="2dp"
+                            android:text="Encontrado"
+                            android:textColor="@color/primary_green"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Recife • 4 km"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Barra de Navegação Inferior -->
+    <LinearLayout
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/white"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_nav_home"
+                app:tint="@color/primary_green"
+                android:contentDescription="Início"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Início"
+                android:textColor="@color/primary_green"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_pets"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Animais"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Animais"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <Button
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_button_primary"
+                android:text="+"
+                android:textColor="@color/white"
+                android:textSize="22sp" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_map"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Mapa"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mapa"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_profile"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Perfil"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Perfil"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

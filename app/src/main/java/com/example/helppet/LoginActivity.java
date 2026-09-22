@@ -1,5 +1,6 @@
 package com.example.helppet;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.SpannableString;
@@ -72,7 +73,9 @@ public class LoginActivity extends AppCompatActivity {
         ClickableSpan clickableSpan = new ClickableSpan() {
             @Override
             public void onClick(@NonNull View widget) {
-                Toast.makeText(LoginActivity.this, "Navegar para tela de cadastro", Toast.LENGTH_SHORT).show();
+                // Aqui está a mudança: agora abre o ecrã de cadastro em vez de mostrar apenas o Toast
+                Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
+                startActivity(intent);
             }
 
             @Override
@@ -120,5 +123,10 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         Toast.makeText(this, "Login efetuado com sucesso!", Toast.LENGTH_SHORT).show();
+
+        // Abre a Tela Principal e fecha o Login
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 }
