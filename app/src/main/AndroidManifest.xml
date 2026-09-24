@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -11,6 +12,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.HelpPet">
+        <activity android:name=".PerdiAnimalActivity" />
+        <activity android:name=".EncontreiAnimalActivity" />
+        <activity android:name=".QueroAdotarActivity" />
+        <activity android:name=".AnimaisActivity" />
 
         <!-- Tela de Login agora é a principal (tem o intent-filter MAIN e LAUNCHER) -->
         <activity
