@@ -37,7 +37,7 @@
                     android:clickable="true"
                     android:contentDescription="Voltar" />
 
-                <!-- TÍTULO ALTERADO -->
+                <!-- TÍTULO -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -48,37 +48,11 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Caixa de Adicionar Fotos -->
-            <LinearLayout
-                android:id="@+id/box_foto"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginTop="32dp"
-                android:background="@drawable/bg_dashed_border"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:clickable="true"
-                android:focusable="true">
-
-                <ImageView
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:src="@drawable/ic_camera_add" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Adicionar fotos"
-                    android:textColor="#758A82"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Campo: Nome do Pet -->
+            <!-- Campo: Nome do Pet (Margem ajustada pois a foto foi removida) -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="32dp"
                 android:orientation="horizontal">
                 <TextView
                     android:layout_width="wrap_content"

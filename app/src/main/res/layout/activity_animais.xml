@@ -419,33 +419,40 @@
     </ScrollView>
 
     <!-- BARRA INFERIOR DE NAVEGAÇÃO -->
+    <!-- Barra de Navegação Inferior (Tela Animais) -->
     <LinearLayout
-        android:id="@+id/bottom_nav"
+        android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:background="@android:color/white"
-        android:elevation="16dp"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:gravity="center"
         android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
+            android:id="@+id/nav_inicio"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:src="@drawable/ic_nav_home"
-                app:tint="#9E9E9E"/>
+                app:tint="@color/text_secondary"
+                android:contentDescription="Início"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Início"
-                android:textSize="10sp"
-                android:textColor="#9E9E9E"
-                android:layout_marginTop="4dp"/>
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -454,76 +461,85 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <!-- Icone Animais destacado em Verde -->
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_adotar"
-                app:tint="#2E5A4A"/>
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_nav_pets"
+                app:tint="@color/primary_green"
+                android:contentDescription="Animais"/>
+            <!-- O texto Animais fica a verde e negrito porque estamos nesta tela -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Animais"
-                android:textSize="10sp"
-                android:textColor="#2E5A4A"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"/>
+                android:textColor="@color/primary_green"
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Botão + Central -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+
+            <!-- O Botão Central Verde -->
+            <TextView
+                android:layout_width="46dp"
+                android:layout_height="46dp"
                 android:layout_gravity="center"
                 android:background="@drawable/bg_circle_green"
-                android:src="@android:drawable/ic_input_add"
-                app:tint="@android:color/white"
-                android:padding="12dp"/>
+                android:gravity="center"
+                android:text="+"
+                android:textColor="@color/white"
+                android:textSize="26sp" />
         </FrameLayout>
 
         <LinearLayout
+            android:id="@+id/nav_mapa"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:src="@drawable/ic_nav_map"
-                app:tint="#9E9E9E"/>
+                app:tint="@color/text_secondary"
+                android:contentDescription="Mapa"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Mapa"
-                android:textSize="10sp"
-                android:textColor="#9E9E9E"
-                android:layout_marginTop="4dp"/>
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_perfil"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_adotar"
-                app:tint="#9E9E9E"/>
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_nav_profile"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Perfil"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Perfil"
-                android:textSize="10sp"
-                android:textColor="#9E9E9E"
-                android:layout_marginTop="4dp"/>
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
         </LinearLayout>
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

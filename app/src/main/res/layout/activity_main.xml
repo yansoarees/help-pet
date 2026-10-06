@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="@color/background_offwhite">
 
     <ScrollView
@@ -44,10 +45,12 @@
 
             <!-- Saudação -->
             <TextView
+                android:id="@+id/txtSaudacao"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="Olá!"
+                tools:text="Olá, Yan!"
                 android:textColor="@color/text_primary"
                 android:textSize="30sp"
                 android:textStyle="bold" />
@@ -370,11 +373,13 @@
     <LinearLayout
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:background="@color/white"
+        android:layout_height="80dp"
+        android:background="#FFFFFF"
         android:elevation="8dp"
         android:gravity="center"
         android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
@@ -394,11 +399,10 @@
                 android:layout_height="wrap_content"
                 android:text="Início"
                 android:textColor="@color/primary_green"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- AQUI ESTÁ O BOTÃO ANIMAIS ATUALIZADO COM O ID -->
         <LinearLayout
             android:id="@+id/nav_animais"
             android:layout_width="0dp"
@@ -419,7 +423,7 @@
                 android:layout_height="wrap_content"
                 android:text="Animais"
                 android:textColor="@color/text_secondary"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <FrameLayout
@@ -427,11 +431,12 @@
             android:layout_height="match_parent"
             android:layout_weight="1">
 
-            <Button
+            <TextView
                 android:layout_width="46dp"
                 android:layout_height="46dp"
                 android:layout_gravity="center"
-                android:background="@drawable/bg_button_primary"
+                android:background="@drawable/bg_circle_green"
+                android:gravity="center"
                 android:text="+"
                 android:textColor="@color/white"
                 android:textSize="26sp" />
@@ -454,7 +459,7 @@
                 android:layout_height="wrap_content"
                 android:text="Mapa"
                 android:textColor="@color/text_secondary"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -474,7 +479,7 @@
                 android:layout_height="wrap_content"
                 android:text="Perfil"
                 android:textColor="@color/text_secondary"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
     </LinearLayout>
