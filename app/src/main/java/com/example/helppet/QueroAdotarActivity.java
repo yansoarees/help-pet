@@ -58,15 +58,7 @@ public class QueroAdotarActivity extends AppCompatActivity {
                 }
         );
 
-        LinearLayout boxFoto = findViewById(R.id.box_foto);
-        boxFoto.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_PICK);
-                intent.setType("image/*");
-                pegarFotoLauncher.launch(intent);
-            }
-        });
+
     }
 
     private void mostrarOpcoesEspecie() {

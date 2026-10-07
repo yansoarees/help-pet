@@ -97,7 +97,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/tabs_container"
-        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         android:clipToPadding="false"
         android:padding="20dp">
 
@@ -419,7 +419,6 @@
     </ScrollView>
 
     <!-- BARRA INFERIOR DE NAVEGAÇÃO -->
-    <!-- Barra de Navegação Inferior (Tela Animais) -->
     <LinearLayout
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
