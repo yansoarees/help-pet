@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
 
         android:allowBackup="true"
@@ -16,8 +16,13 @@
         <activity android:name=".EncontreiAnimalActivity" />
         <activity android:name=".QueroAdotarActivity" />
         <activity android:name=".AnimaisActivity" />
+        <activity android:name=".DoarAnimalActivity" android:exported="false" />
+        <activity
+            android:name=".DetalhesPetActivity"
+            android:exported="false" />
+        <activity android:name=".PerfilActivity" android:exported="false" />
 
-        <!-- Tela de Login agora é a principal (tem o intent-filter MAIN e LAUNCHER) -->
+
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -30,14 +35,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Ecrã de Cadastro -->
+
         <activity
             android:name=".RegisterActivity"
             android:exported="false"
             android:theme="@style/Theme.HelpPet"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- MainActivity continua no projeto, mas não é mais a primeira tela a abrir -->
+
         <activity
             android:name=".MainActivity"
             android:exported="false"
