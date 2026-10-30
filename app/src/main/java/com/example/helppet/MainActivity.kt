@@ -36,6 +36,16 @@ import com.google.firebase.auth.FirebaseAuth
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Pega o Token do FCM assim que a app abre
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                android.util.Log.d("FCM_TOKEN", "TUA_CHAVE: ${task.result}")
+            } else {
+                android.util.Log.e("FCM_TOKEN", "Erro ao obter token", task.exception)
+            }
+        }
+
         setContent {
             MaterialTheme {
                 MainScreen()
