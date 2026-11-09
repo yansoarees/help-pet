@@ -304,6 +304,7 @@ fun AttributeBadge(text: String) {
 
 @Composable
 fun HeaderSection() {
+    val context = LocalContext.current
     val primaryGreen = colorResource(id = R.color.primary_green)
     val textPrimary = colorResource(id = R.color.text_primary)
     val textSecondary = colorResource(id = R.color.text_secondary)
@@ -334,9 +335,22 @@ fun HeaderSection() {
     }
 
     Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(text = "HelpPet", color = primaryGreen, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Icon(painter = painterResource(id = R.drawable.ic_bell), contentDescription = "Notificações", tint = primaryGreen, modifier = Modifier.size(32.dp))
+            Icon(
+                painter = painterResource(id = R.drawable.ic_bell),
+                contentDescription = "Notificações",
+                tint = primaryGreen,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clickable {
+                        context.startActivity(Intent(context, NotificacoesActivity::class.java))
+                    }
+            )
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(text = "Olá, $userName!", color = textPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold)

@@ -59,7 +59,7 @@ class PerdiAnimalActivity : ComponentActivity() {
 fun PerdiAnimalScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val db = remember { FirebaseFirestore.getInstance() }
-    val auth = remember { FirebaseAuth.getInstance() } // <- Autenticação adicionada
+    val auth = remember { FirebaseAuth.getInstance() }
     val coroutineScope = rememberCoroutineScope()
 
     var nomePet by remember { mutableStateOf("") }
@@ -141,8 +141,9 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
         Button(
             onClick = {
-                if (nomePet.isEmpty() || especie.isEmpty() || genero.isEmpty() || caracteristicas.isEmpty() || localVisto.isEmpty() || telefone.length < 10) {
-                    Toast.makeText(context, "Por favor, preenche os campos obrigatórios!", Toast.LENGTH_SHORT).show()
+                // 1. Usa o FormValidator (testado no teste unitário) para validar Nome e Telefone
+                if (!FormValidator.validarNomePet(nomePet) || !FormValidator.validarTelefone(telefone) || especie.isEmpty() || genero.isEmpty() || caracteristicas.isEmpty() || localVisto.isEmpty()) {
+                    Toast.makeText(context, "Por favor, preenche os campos obrigatórios corretamente!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
                 isLoading = true
@@ -154,7 +155,7 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
                         if (urlUpload != null) linkDaFoto = urlUpload
                     }
 
-                    val userId = auth.currentUser?.uid ?: "" // <- Vai buscar quem está logado
+                    val userId = auth.currentUser?.uid ?: ""
 
                     val petPerdido = Animal(
                         id = "",
@@ -166,11 +167,16 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
                         fotoUrl = linkDaFoto,
                         descricao = "Visto em: $localVisto. Características: $caracteristicas",
                         telefoneContato = telefone,
-                        donoId = userId // <- Salva no banco de dados!
+                        donoId = userId
                     )
 
                     db.collection("animais").add(petPerdido)
                         .addOnSuccessListener {
+                            // 2. Dispara a notificação automática para o sininho!
+                            NotificacaoHelper.enviarAlerta(
+                                titulo = "Alerta: Pet Perdido!",
+                                mensagem = "$nomePet ($especie) desapareceu perto de $localVisto. Viu este pet?"
+                            )
                             isLoading = false
                             Toast.makeText(context, "Pet reportado como perdido com sucesso!", Toast.LENGTH_LONG).show()
                             onBackClick()
