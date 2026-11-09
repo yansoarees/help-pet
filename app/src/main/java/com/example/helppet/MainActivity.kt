@@ -101,76 +101,79 @@ fun MainScreen() {
         containerColor = backgroundOffWhite
     ) { paddingValues ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Box(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
-                HeaderSection()
-            }
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // Box externa para segurar toda a tela MAIS o pop-up
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
             ) {
-                items(categorias) { categoria ->
-                    FilterChipCustom(
-                        texto = categoria,
-                        isSelected = categoria == categoriaSelecionada,
-                        onClick = { categoriaSelecionada = categoria },
-                        primaryGreen = primaryGreen
-                    )
+                Box(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
+                    HeaderSection()
                 }
-            }
 
-            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = primaryGreen, modifier = Modifier.align(Alignment.CenterHorizontally))
-                } else if (animaisFiltrados.isEmpty()) {
-                    Text(
-                        text = "Nenhum pet encontrado.",
-                        color = colorResource(id = R.color.text_secondary),
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 20.dp)
-                    )
-                } else {
-                    animaisFiltrados.forEach { animal ->
-                        AnimalCardPremium(animal = animal, primaryGreen = primaryGreen)
-                        Spacer(modifier = Modifier.height(20.dp))
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(categorias) { categoria ->
+                        FilterChipCustom(
+                            texto = categoria,
+                            isSelected = categoria == categoriaSelecionada,
+                            onClick = { categoriaSelecionada = categoria },
+                            primaryGreen = primaryGreen
+                        )
                     }
                 }
+
+                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = primaryGreen, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    } else if (animaisFiltrados.isEmpty()) {
+                        Text(
+                            text = "Nenhum pet encontrado.",
+                            color = colorResource(id = R.color.text_secondary),
+                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 20.dp)
+                        )
+                    } else {
+                        animaisFiltrados.forEach { animal ->
+                            AnimalCardPremium(animal = animal, primaryGreen = primaryGreen)
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
-            Spacer(modifier = Modifier.height(32.dp))
-        }
 
-        // Pop-up com as 4 opções completas!
-        if (showAddMenu) {
-            Dialog(onDismissRequest = { showAddMenu = false }) {
-                Surface(shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 8.dp) {
-                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("O que você deseja fazer?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryGreen)
-                        Spacer(modifier = Modifier.height(24.dp))
+            // Pop-up com as 4 opções completas!
+            if (showAddMenu) {
+                Dialog(onDismissRequest = { showAddMenu = false }) {
+                    Surface(shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 8.dp) {
+                        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("O que você deseja fazer?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryGreen)
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                        ActionCard("Perdi um animal", R.drawable.ic_perdi_alert, Color(0xFFFCE8E6), Color(0xFFC53929)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, PerdiAnimalActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Encontrei um animal", R.drawable.ic_encontrei_pet, Color(0xFFE6F4EA), primaryGreen) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, EncontreiAnimalActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Quero adotar", R.drawable.ic_adotar, Color(0xFFFEF7E0), Color(0xFFB06000)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, QueroAdotarActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Colocar para Adoção", R.drawable.ic_nav_pets, Color(0xFFF3E5F5), Color(0xFF6A1B9A)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, DoarAnimalActivity::class.java))
+                            ActionCard("Perdi um animal", R.drawable.ic_perdi_alert, Color(0xFFFCE8E6), Color(0xFFC53929)) {
+                                showAddMenu = false
+                                context.startActivity(Intent(context, PerdiAnimalActivity::class.java))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ActionCard("Encontrei um animal", R.drawable.ic_encontrei_pet, Color(0xFFE6F4EA), primaryGreen) {
+                                showAddMenu = false
+                                context.startActivity(Intent(context, EncontreiAnimalActivity::class.java))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ActionCard("Quero adotar", R.drawable.ic_adotar, Color(0xFFFEF7E0), Color(0xFFB06000)) {
+                                showAddMenu = false
+                                context.startActivity(Intent(context, QueroAdotarActivity::class.java))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ActionCard("Colocar para Adoção", R.drawable.ic_nav_pets, Color(0xFFF3E5F5), Color(0xFF6A1B9A)) {
+                                showAddMenu = false
+                                context.startActivity(Intent(context, DoarAnimalActivity::class.java))
+                            }
                         }
                     }
                 }
@@ -291,7 +294,7 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
             }
         }
     }
-} // <--- A CHAVETA QUE FALTAVA ESTÁ AQUI!
+}
 
 @Composable
 fun AttributeBadge(text: String) {
