@@ -25,11 +25,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -64,15 +67,14 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var statusResgate by remember { mutableStateOf("Está comigo") }
-    // Modo de identificação: "foto" (novo pet) ou "lista" (selecionar pet perdido)
     var modoIdentificacao by remember { mutableStateOf("foto") }
 
-    // Lista de animais perdidos vinda do Firebase
     var listaPetsPerdidos by remember { mutableStateOf<List<Animal>>(emptyList()) }
     var isLoadingPerdidos by remember { mutableStateOf(false) }
     var petPerdidoSelecionado by remember { mutableStateOf<Animal?>(null) }
 
     var especie by remember { mutableStateOf("") }
+    var especieOutroTexto by remember { mutableStateOf("") } // NOVO: Para capturar a espécie customizada
     var porte by remember { mutableStateOf("") }
     var corPrincipal by remember { mutableStateOf("") }
     var localizacao by remember { mutableStateOf("") }
@@ -80,14 +82,13 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
     var isLoading by remember { mutableStateOf(false) }
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Busca no Firebase todos os animais que estão marcados como "(Perdido)"
     LaunchedEffect(Unit) {
         isLoadingPerdidos = true
         db.collection("animais").get()
             .addOnSuccessListener { snapshot ->
                 val perdidos = snapshot.documents.mapNotNull { doc ->
                     val nome = doc.getString("nome") ?: ""
-                    if (nome.contains("Perdido", ignoreCase = true)) {
+                    if (nome.contains("Perdido", ignoreCase = true) || nome.contains("Desaparecido", ignoreCase = true)) {
                         Animal(
                             id = doc.id,
                             nome = nome,
@@ -139,7 +140,6 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
             Text("Alerta de Pet Encontrado", color = textDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
-        // 1. Onde está o animal
         Text("Onde está o animal agora?", color = textDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -158,7 +158,6 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // 2. Escolha entre Tirar Foto ou Selecionar da Lista de Perdidos
         Text("Como queres identificar o pet?", color = textDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -182,7 +181,6 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // MODO A: Selecionar um pet que já está na lista de perdidos
         if (modoIdentificacao == "lista") {
             LabelWithStar("Seleciona o pet desaparecido ", isMandatory = true)
 
@@ -233,7 +231,6 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                 photoPickerLauncher.launch("image/*")
             }
         } else {
-            // MODO B: Tirar foto rápida e descrever manualmente
             LabelWithStar("Foto do animal ", isMandatory = true)
             PhotoUploadBox(fotoUri = fotoUri, primaryGreen = primaryGreen) {
                 photoPickerLauncher.launch("image/*")
@@ -244,6 +241,19 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                 QuickChip("Cachorro", especie == "Cachorro") { especie = "Cachorro" }
                 QuickChip("Gato", especie == "Gato") { especie = "Gato" }
                 QuickChip("Outro", especie == "Outro") { especie = "Outro" }
+            }
+
+            // NOVO: Caixinha extra que só aparece se escolher "Outro"
+            if (especie == "Outro") {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = especieOutroTexto,
+                    onValueChange = { especieOutroTexto = it },
+                    placeholder = { Text("Qual é a espécie? (Ex: Coelho, Pássaro)", color = textHint) },
+                    colors = customTextFieldColors(),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(60.dp)
+                )
             }
 
             LabelWithStar("Porte ", isMandatory = true)
@@ -264,7 +274,6 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
             )
         }
 
-        // Campos em comum para ambos os modos: Onde foi encontrado + WhatsApp
         LabelWithStar("Onde foi encontrado? ", isMandatory = true)
         OutlinedTextField(
             value = localizacao,
@@ -294,7 +303,9 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
         Button(
             onClick = {
-                // Validação para o modo Lista de Perdidos
+                // Valida a espécie correta (pega o texto se for "Outro")
+                val especieFinal = if (modoIdentificacao == "foto" && especie == "Outro") especieOutroTexto.trim() else especie
+
                 if (modoIdentificacao == "lista") {
                     if (petPerdidoSelecionado == null) {
                         Toast.makeText(context, "Seleciona qual pet da lista encontraste!", Toast.LENGTH_SHORT).show()
@@ -305,8 +316,7 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                         return@Button
                     }
                 } else {
-                    // Validação para o modo Foto / Novo Pet
-                    if (especie.isEmpty() || porte.isEmpty() || corPrincipal.isEmpty() || localizacao.isEmpty() || !FormValidator.validarTelefone(telefone)) {
+                    if (especieFinal.isEmpty() || porte.isEmpty() || corPrincipal.isEmpty() || localizacao.isEmpty() || !FormValidator.validarTelefone(telefone)) {
                         Toast.makeText(context, "Por favor, preenche as informações rápidas e um telefone válido!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
@@ -324,26 +334,39 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                     val userId = auth.currentUser?.uid ?: ""
                     val petSel = petPerdidoSelecionado
 
-                    val nomeLimpo = petSel?.nome?.replace("(Perdido)", "")?.trim() ?: "Desconhecido"
+                    if (petSel != null) {
+                        val nomeLimpo = petSel.nome.replace("(Perdido)", "", ignoreCase = true)
+                            .replace("(Desaparecido)", "", ignoreCase = true).trim()
+                        val novoNome = "$nomeLimpo (Encontrado - $statusResgate)"
 
-                    val petEncontrado = if (petSel != null) {
-                        Animal(
-                            id = "",
-                            nome = "$nomeLimpo (Encontrado - $statusResgate)",
-                            especie = petSel.especie,
-                            raca = petSel.raca,
-                            genero = petSel.genero,
-                            idade = petSel.idade,
-                            fotoUrl = linkDaFoto,
-                            descricao = "Encontrado em: $localizacao",
-                            telefoneContato = telefone,
-                            donoId = userId
+                        val updates = hashMapOf<String, Any>(
+                            "nome" to novoNome,
+                            "descricao" to "Encontrado em: $localizacao",
+                            "telefoneContato" to telefone,
+                            "fotoUrl" to linkDaFoto
                         )
+
+                        db.collection("animais").document(petSel.id).update(updates)
+                            .addOnSuccessListener {
+                                NotificacaoHelper.enviarAlerta(
+                                    titulo = "Notícia sobre $nomeLimpo!",
+                                    mensagem = "O pet $nomeLimpo foi marcado como '$statusResgate' perto de $localizacao! Contacto: $telefone"
+                                )
+                                isLoading = false
+                                Toast.makeText(context, "Status atualizado! O pet foi retirado do mapa de buscas.", Toast.LENGTH_LONG).show()
+                                onBackClick()
+                            }
+                            .addOnFailureListener {
+                                isLoading = false
+                                Toast.makeText(context, "Erro ao atualizar status.", Toast.LENGTH_LONG).show()
+                            }
                     } else {
-                        Animal(
+                        // Evita o nome "Desconhecido": usa a espécie e a cor principal no título!
+                        val tituloPet = "$especieFinal $corPrincipal ($statusResgate)"
+                        val petEncontrado = Animal(
                             id = "",
-                            nome = "Desconhecido ($statusResgate)",
-                            especie = especie,
+                            nome = tituloPet,
+                            especie = especieFinal, // Usa a espécie correta
                             raca = "Porte $porte",
                             genero = "",
                             idade = corPrincipal,
@@ -352,29 +375,22 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                             telefoneContato = telefone,
                             donoId = userId
                         )
-                    }
 
-                    db.collection("animais").add(petEncontrado)
-                        .addOnSuccessListener {
-                            if (petSel != null) {
-                                NotificacaoHelper.enviarAlerta(
-                                    titulo = "Notícia sobre $nomeLimpo!",
-                                    mensagem = "O pet $nomeLimpo (${petSel.especie}) foi marcado como '$statusResgate' perto de $localizacao! Contacto: $telefone"
-                                )
-                            } else {
+                        db.collection("animais").add(petEncontrado)
+                            .addOnSuccessListener {
                                 NotificacaoHelper.enviarAlerta(
                                     titulo = "Pet Encontrado ($statusResgate)!",
-                                    mensagem = "$especie ($corPrincipal, porte $porte) visto em: $localizacao."
+                                    mensagem = "$especieFinal ($corPrincipal, porte $porte) visto em: $localizacao."
                                 )
+                                isLoading = false
+                                Toast.makeText(context, "Alerta enviado! Obrigado por ajudares.", Toast.LENGTH_LONG).show()
+                                onBackClick()
                             }
-                            isLoading = false
-                            Toast.makeText(context, "Alerta enviado! Obrigado por ajudares.", Toast.LENGTH_LONG).show()
-                            onBackClick()
-                        }
-                        .addOnFailureListener {
-                            isLoading = false
-                            Toast.makeText(context, "Erro ao enviar alerta.", Toast.LENGTH_LONG).show()
-                        }
+                            .addOnFailureListener {
+                                isLoading = false
+                                Toast.makeText(context, "Erro ao enviar alerta.", Toast.LENGTH_LONG).show()
+                            }
+                    }
                 }
             },
             enabled = !isLoading,
@@ -409,23 +425,54 @@ private fun PetPerdidoItemCard(
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        if (isSelected) primaryGreen else Color(0xFFFDECEA),
-                        CircleShape
-                    ),
+                modifier = Modifier.size(64.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Pets,
-                    contentDescription = null,
-                    tint = if (isSelected) Color.White else accentRed
-                )
+                if (pet.fotoUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = pet.fotoUrl,
+                        contentDescription = pet.nome,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFFDECEA), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Pets,
+                            contentDescription = null,
+                            tint = accentRed,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(22.dp)
+                            .background(primaryGreen, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selecionado",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(14.dp))
@@ -437,7 +484,8 @@ private fun PetPerdidoItemCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = pet.nome.replace("(Perdido)", "").trim(),
+                        text = pet.nome.replace("(Perdido)", "", ignoreCase = true)
+                            .replace("(Desaparecido)", "", ignoreCase = true).trim(),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color(0xFF1C2723)
@@ -456,6 +504,7 @@ private fun PetPerdidoItemCard(
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                // CORRIGIDO: Bug do traço e quebra de linha que estava a dar erro!
                 Text(
                     text = "${pet.especie} • ${pet.raca} ${if (pet.genero.isNotEmpty()) "• ${pet.genero}" else ""}",
                     fontSize = 13.sp,
@@ -494,19 +543,32 @@ private fun PhotoUploadBox(fotoUri: Uri?, primaryGreen: Color, onClick: () -> Un
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_camera_add),
-                contentDescription = null,
-                tint = if (fotoUri == null) Color.Unspecified else primaryGreen
+        // NOVO: Se tiver foto, mostra ela preenchendo a caixa. Se não, mostra o texto.
+        if (fotoUri != null) {
+            AsyncImage(
+                model = fotoUri,
+                contentDescription = "Foto pronta",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(2.dp)
+                    .clip(RoundedCornerShape(22.dp))
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (fotoUri == null) "Tirar foto rápida" else "Foto pronta!",
-                color = if (fotoUri == null) Color(0xFF758A82) else primaryGreen,
-                fontSize = 15.sp,
-                fontWeight = if (fotoUri != null) FontWeight.Bold else FontWeight.Normal
-            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_camera_add),
+                    contentDescription = null,
+                    tint = Color(0xFF758A82)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Tirar foto rápida",
+                    color = Color(0xFF758A82),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
         }
     }
 }

@@ -11,13 +11,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -55,11 +56,9 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
 
     var showAddMenu by remember { mutableStateOf(false) }
 
-    // --- ESTADO PARA OS ANIMAIS REAIS DA NUVEM ---
     var listaAnimais by remember { mutableStateOf<List<Animal>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // --- BUSCAR DADOS NO FIRESTORE EM TEMPO REAL ---
     LaunchedEffect(Unit) {
         db.collection("animais").addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -90,7 +89,6 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // BARRA SUPERIOR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -122,7 +120,6 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
                 )
             }
 
-            // ABAS
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                 abas.forEach { aba ->
                     Column(
@@ -155,17 +152,18 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- FILTRAGEM REAL (Baseada nos textos que salvamos nos formulários) ---
             val listaFiltrada = listaAnimais.filter { animal ->
+                val isPerdido = animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true)
+                val isAdocao = animal.nome.contains("Para Adoção", ignoreCase = true)
+
                 when (tabSelecionada) {
-                    "Desaparecidos" -> animal.nome.contains("(Perdido)", ignoreCase = true)
-                    "Achados" -> animal.nome.contains("Desconhecido", ignoreCase = true)
-                    "Adoção" -> animal.nome.contains("(Para Adoção)", ignoreCase = true)
+                    "Desaparecidos" -> isPerdido
+                    "Achados" -> animal.nome.contains("Encontrado", ignoreCase = true) || animal.nome.contains("Está comigo", ignoreCase = true) || animal.nome.contains("Avistei na rua", ignoreCase = true)
+                    "Adoção" -> isAdocao
                     else -> true
                 }
             }
 
-            // CONTEÚDO DA LISTA
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF2E5A4A))
@@ -186,7 +184,6 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
             }
         }
 
-        // POP-UP MÁGICO
         if (showAddMenu) {
             val primaryGreen = colorResource(id = R.color.primary_green)
             Dialog(onDismissRequest = { showAddMenu = false }) {
@@ -195,7 +192,6 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
                         Text("O que você deseja fazer?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryGreen)
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // ATENÇÃO: O ActionCard já está público na MainActivity, por isso funciona aqui!
                         ActionCard("Perdi um animal", R.drawable.ic_perdi_alert, Color(0xFFFCE8E6), Color(0xFFC53929)) {
                             showAddMenu = false
                             context.startActivity(Intent(context, PerdiAnimalActivity::class.java))
@@ -222,22 +218,34 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
     }
 }
 
-// --- CARTÃO DE ANIMAL ADAPTADO PARA DADOS REAIS ---
 @Composable
 fun AnimalItemListCardReal(animal: Animal) {
     val context = LocalContext.current
+
+    val isPerdido = animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true)
+    val isAdocao = animal.nome.contains("Para Adoção", ignoreCase = true)
+
     val (corTag, textoTag) = when {
-        animal.nome.contains("(Perdido)", ignoreCase = true) -> Color(0xFFD32F2F) to "Desaparecido"
-        animal.nome.contains("(Para Adoção)", ignoreCase = true) -> Color(0xFFFF9800) to "Adoção"
+        isPerdido -> Color(0xFFD32F2F) to "Desaparecido"
+        isAdocao -> Color(0xFFFF9800) to "Adoção"
         else -> colorResource(id = R.color.primary_green) to "Encontrado"
     }
 
-    val nomeLimpo = animal.nome
-        .replace(" (Para Adoção)", "")
-        .replace(" (Perdido)", "")
-        .replace(" (Está comigo)", "")
-        .replace(" (Avistei na rua)", "")
+    val nomeLimpoTemp = animal.nome
+        .replace(" (Para Adoção)", "", ignoreCase = true)
+        .replace(" (Perdido)", "", ignoreCase = true)
+        .replace(" (Desaparecido)", "", ignoreCase = true)
+        .replace(" (Está comigo)", "", ignoreCase = true)
+        .replace(" (Avistei na rua)", "", ignoreCase = true)
+        .replace(" (Encontrado - Está comigo)", "", ignoreCase = true)
+        .replace(" (Encontrado - Avistei na rua)", "", ignoreCase = true)
+        .trim()
 
+    val nomeLimpo = if (nomeLimpoTemp.equals("Desconhecido", ignoreCase = true)) {
+        "${animal.especie} (Resgatado)"
+    } else {
+        nomeLimpoTemp
+    }
     Card(
         onClick = {
             val intent = Intent(context, DetalhesPetActivity::class.java).apply {
@@ -263,14 +271,31 @@ fun AnimalItemListCardReal(animal: Animal) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = animal.fotoUrl.ifEmpty { R.drawable.ic_launcher_background },
-                contentDescription = nomeLimpo,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(width = 100.dp, height = 120.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            )
+            // MOSTRA A FOTO REAL OU UM FUNDO COM ÍCONE CASO NÃO TENHA FOTO
+            if (animal.fotoUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = animal.fotoUrl,
+                    contentDescription = nomeLimpo,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 100.dp, height = 120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(width = 100.dp, height = 120.dp)
+                        .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Pets,
+                        contentDescription = "Sem foto",
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier

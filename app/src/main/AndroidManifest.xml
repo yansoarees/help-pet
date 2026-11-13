@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <application
 
         android:allowBackup="true"
@@ -18,13 +21,12 @@
         <activity android:name=".QueroAdotarActivity" />
         <activity android:name=".AnimaisActivity" />
         <activity android:name=".DoarAnimalActivity" android:exported="false" />
-        <activity
-            android:name=".DetalhesPetActivity"
-            android:exported="false" />
+        <activity android:name=".DetalhesPetActivity" android:exported="false" />
         <activity android:name=".PerfilActivity" android:exported="false" />
-        <activity
-            android:name=".NotificacoesActivity"
-            android:exported="false" />
+        <activity android:name=".NotificacoesActivity" android:exported="false" />
+        <activity android:name=".MapaActivity" android:exported="false" />
+        <activity android:name=".EditarAnimalActivity" />
+
 
 
         <activity

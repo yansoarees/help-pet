@@ -21,11 +21,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +67,8 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
     var nomePet by remember { mutableStateOf("") }
     var especie by remember { mutableStateOf("") }
+    // Estado extra para guardar o texto quando a pessoa seleciona "Outro"
+    var especieOutroTexto by remember { mutableStateOf("") }
     var genero by remember { mutableStateOf("") }
     var raca by remember { mutableStateOf("") }
     var caracteristicas by remember { mutableStateOf("") }
@@ -99,13 +104,26 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
         LabelWithStar("Foto nítida do pet ", isMandatory = true)
         val dashPath = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)
-        Box(modifier = Modifier.fillMaxWidth().height(140.dp).drawBehind {
-            drawRoundRect(color = if (fotoUri == null) Color(0xFF758A82) else accentRed, style = Stroke(width = 4f, pathEffect = dashPath), cornerRadius = CornerRadius(24f))
-        }.clickable { photoPickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = if (fotoUri == null) Color.Unspecified else accentRed)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = if (fotoUri == null) "Adicionar foto" else "Foto adicionada e pronta!", color = if (fotoUri == null) Color(0xFF758A82) else accentRed, fontSize = 15.sp, fontWeight = if (fotoUri != null) FontWeight.Bold else FontWeight.Normal)
+        Box(
+            modifier = Modifier.fillMaxWidth().height(140.dp).drawBehind {
+                drawRoundRect(color = if (fotoUri == null) Color(0xFF758A82) else accentRed, style = Stroke(width = 4f, pathEffect = dashPath), cornerRadius = CornerRadius(24f))
+            }.clickable { photoPickerLauncher.launch("image/*") },
+            contentAlignment = Alignment.Center
+        ) {
+            // SE TIVER FOTO, MOSTRA A IMAGEM. SE NÃO, MOSTRA O TEXTO/ÍCONE
+            if (fotoUri != null) {
+                AsyncImage(
+                    model = fotoUri,
+                    contentDescription = "Foto selecionada",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().padding(2.dp).clip(RoundedCornerShape(8.dp)) // Padding para não cobrir a borda tracejada
+                )
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = Color(0xFF758A82))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Adicionar foto", color = Color(0xFF758A82), fontSize = 15.sp, fontWeight = FontWeight.Normal)
+                }
             }
         }
 
@@ -117,6 +135,19 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
             QuickChip("Cachorro", especie == "Cachorro", accentRed) { especie = "Cachorro" }
             QuickChip("Gato", especie == "Gato", accentRed) { especie = "Gato" }
             QuickChip("Outro", especie == "Outro", accentRed) { especie = "Outro" }
+        }
+
+        // CAIXA MÁGICA: Só aparece se a espécie escolhida for "Outro"
+        if (especie == "Outro") {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = especieOutroTexto,
+                onValueChange = { especieOutroTexto = it },
+                placeholder = { Text("Qual é a espécie? (Ex: Coelho, Pássaro)", color = textHint) },
+                colors = customTextFieldColors(accentRed),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp)
+            )
         }
 
         LabelWithStar("Gênero ", isMandatory = true)
@@ -141,8 +172,10 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
         Button(
             onClick = {
-                // 1. Usa o FormValidator (testado no teste unitário) para validar Nome e Telefone
-                if (!FormValidator.validarNomePet(nomePet) || !FormValidator.validarTelefone(telefone) || especie.isEmpty() || genero.isEmpty() || caracteristicas.isEmpty() || localVisto.isEmpty()) {
+                // Validação de espécie: se for "Outro", o utilizador tem de ter escrito alguma coisa
+                val especieFinal = if (especie == "Outro") especieOutroTexto.trim() else especie
+
+                if (!FormValidator.validarNomePet(nomePet) || !FormValidator.validarTelefone(telefone) || especieFinal.isEmpty() || genero.isEmpty() || caracteristicas.isEmpty() || localVisto.isEmpty()) {
                     Toast.makeText(context, "Por favor, preenche os campos obrigatórios corretamente!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
@@ -160,7 +193,7 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
                     val petPerdido = Animal(
                         id = "",
                         nome = "$nomePet (Perdido)",
-                        especie = especie,
+                        especie = especieFinal, // Salva o nome real da espécie escrita
                         raca = raca.ifEmpty { "Sem raça definida" },
                         genero = genero,
                         idade = "Desconhecida",
@@ -172,10 +205,9 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
                     db.collection("animais").add(petPerdido)
                         .addOnSuccessListener {
-                            // 2. Dispara a notificação automática para o sininho!
                             NotificacaoHelper.enviarAlerta(
                                 titulo = "Alerta: Pet Perdido!",
-                                mensagem = "$nomePet ($especie) desapareceu perto de $localVisto. Viu este pet?"
+                                mensagem = "$nomePet ($especieFinal) desapareceu perto de $localVisto. Viu este pet?"
                             )
                             isLoading = false
                             Toast.makeText(context, "Pet reportado como perdido com sucesso!", Toast.LENGTH_LONG).show()

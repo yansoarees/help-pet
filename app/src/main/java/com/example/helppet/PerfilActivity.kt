@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
@@ -63,7 +66,6 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
     val userEmail = auth.currentUser?.email ?: ""
     val creationTimestamp = auth.currentUser?.metadata?.creationTimestamp ?: 0L
 
-    // Variáveis para guardar as preferências do alerta
     var savedAlertaEspecie by remember { mutableStateOf("Qualquer") }
     var savedAlertaRaio by remember { mutableStateOf("50 km") }
 
@@ -75,7 +77,6 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
         }
     }
 
-    // Cores da Paleta HelpPet
     val backgroundOffWhite = colorResource(id = R.color.background_offwhite)
     val primaryGreen = colorResource(id = R.color.primary_green)
     val textDark = Color(0xFF1C2723)
@@ -85,15 +86,34 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
     var showAlertaDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Vai buscar os dados do utilizador e os alertas guardados
+    // Estado para os anúncios do usuário
+    var meusAnimais by remember { mutableStateOf<List<Animal>>(emptyList()) }
+    var isLoadingAnimais by remember { mutableStateOf(true) }
+
     LaunchedEffect(userId) {
         if (userId != null) {
             db.collection("usuarios").document(userId).get()
                 .addOnSuccessListener { doc ->
                     userName = doc.getString("nome") ?: "Utilizador"
-                    // Tenta ler os alertas se já existirem, senão usa os valores por omissão
                     savedAlertaEspecie = doc.getString("alertaEspecie") ?: "Qualquer"
                     savedAlertaRaio = doc.getString("alertaRaio") ?: "50 km"
+                }
+
+            // Busca os animais cadastrados por este usuário
+            db.collection("animais")
+                .whereEqualTo("donoId", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        isLoadingAnimais = false
+                        return@addSnapshotListener
+                    }
+                    if (snapshot != null) {
+                        val animais = snapshot.documents.mapNotNull { doc ->
+                            doc.toObject(Animal::class.java)?.copy(id = doc.id)
+                        }
+                        meusAnimais = animais
+                        isLoadingAnimais = false
+                    }
                 }
         }
     }
@@ -135,6 +155,63 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
                 InfoRow(label = "Email", value = userEmail)
                 HorizontalDivider(color = Color(0xFFF0F0F0))
                 InfoRow(label = "Membro desde", value = memberSince)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- MEUS ANÚNCIOS ---
+        Text(
+            text = "MEUS ANÚNCIOS",
+            color = textHint,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        )
+
+        if (isLoadingAnimais) {
+            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = primaryGreen)
+            }
+        } else if (meusAnimais.isEmpty()) {
+            Surface(color = Color.White, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Ainda não tens nenhum pet cadastrado.",
+                    color = textHint,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                meusAnimais.forEach { animal ->
+                    MeuAnimalCard(
+                        animal = animal,
+                        primaryGreen = primaryGreen,
+                        onEdit = {
+                            val intent = Intent(context, EditarAnimalActivity::class.java).apply {
+                                putExtra("petId", animal.id)
+                                putExtra("nome", animal.nome)
+                                putExtra("especie", animal.especie)
+                                putExtra("raca", animal.raca)
+                                putExtra("descricao", animal.descricao)
+                                putExtra("telefone", animal.telefoneContato)
+                            }
+                            context.startActivity(intent)
+                        },
+                        onDelete = {
+                            // Deleta o documento do Firestore
+                            db.collection("animais").document(animal.id)
+                                .delete()
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Anúncio excluído com sucesso!", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Erro ao excluir anúncio.", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    )
+                }
             }
         }
 
@@ -232,20 +309,17 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
             modifier = Modifier.fillMaxHeight()
         ) {
             AlertaRegiaoSheet(
-                initialEspecie = savedAlertaEspecie, // Passa a espécie guardada
-                initialRaio = savedAlertaRaio,       // Passa o raio guardado
+                initialEspecie = savedAlertaEspecie,
+                initialRaio = savedAlertaRaio,
                 modifier = Modifier.fillMaxHeight(),
                 onDismiss = { showAlertaDialog = false },
                 onCriarAlerta = { especie, raio ->
                     showAlertaDialog = false
-
-                    // Lógica para salvar o alerta no Firebase!
                     if (userId != null) {
                         val dadosAlerta = mapOf(
                             "alertaEspecie" to especie,
                             "alertaRaio" to raio
                         )
-                        // Usa o SetOptions.merge() para não apagar os outros dados (nome, telefone)
                         db.collection("usuarios").document(userId)
                             .set(dadosAlerta, SetOptions.merge())
                             .addOnSuccessListener {
@@ -277,6 +351,110 @@ fun InfoRow(label: String, value: String) {
     }
 }
 
+// --- NOVO COMPONENTE: CARD PARA MEUS ANÚNCIOS ---
+@Composable
+fun MeuAnimalCard(animal: Animal, primaryGreen: Color, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Limpa a tag do nome para mostrar bonitinho
+    val nomeLimpoTemp = animal.nome
+        .replace(" (Para Adoção)", "", ignoreCase = true)
+        .replace(" (Perdido)", "", ignoreCase = true)
+        .replace(" (Desaparecido)", "", ignoreCase = true)
+        .replace(" (Está comigo)", "", ignoreCase = true)
+        .replace(" (Avistei na rua)", "", ignoreCase = true)
+        .replace(" (Encontrado - Está comigo)", "", ignoreCase = true)
+        .replace(" (Encontrado - Avistei na rua)", "", ignoreCase = true)
+        .trim()
+
+    val nomeLimpo = if (nomeLimpoTemp.equals("Desconhecido", ignoreCase = true)) {
+        "${animal.especie} (Resgatado)"
+    } else if (nomeLimpoTemp.isEmpty()) {
+        "Sem Nome"
+    } else {
+        nomeLimpoTemp
+    }
+
+    val textoTag = when {
+        animal.nome.contains("Para Adoção", ignoreCase = true) -> "Para Adoção"
+        animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true) -> "Desaparecido"
+        else -> "Encontrado"
+    }
+
+    val corTagBg = when {
+        textoTag == "Desaparecido" -> Color(0xFFFCE8E6)
+        textoTag == "Para Adoção" -> Color(0xFFFEF7E0)
+        else -> Color(0xFFE6F4EA)
+    }
+    val corTagText = when {
+        textoTag == "Desaparecido" -> Color(0xFFC53929)
+        textoTag == "Para Adoção" -> Color(0xFFB06000)
+        else -> primaryGreen
+    }
+
+    // Modal de confirmação
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Excluir Anúncio", fontWeight = FontWeight.Bold) },
+            text = { Text("Tens a certeza que queres excluir este anúncio permanentemente?") },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false; onDelete() }) {
+                    Text("Excluir", color = Color(0xFFC53929), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Cancelar", color = Color.Gray) }
+            }
+        )
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = nomeLimpo, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1C2723), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(color = corTagBg, shape = RoundedCornerShape(8.dp)) {
+                        Text(text = textoTag, color = corTagText, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                // A tua formatação restaurada!
+                Text(
+                    text = "${animal.especie}\n${animal.raca}",
+                    fontSize = 13.sp,
+                    color = Color(0xFF757575)
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar",
+                    tint = primaryGreen,
+                    modifier = Modifier.size(24.dp).clickable { onEdit() }
+                )
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Excluir",
+                    tint = Color(0xFFC53929),
+                    modifier = Modifier.size(24.dp).clickable { showDialog = true }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun AlertaRegiaoSheet(
     initialEspecie: String,
@@ -285,7 +463,6 @@ fun AlertaRegiaoSheet(
     onDismiss: () -> Unit,
     onCriarAlerta: (String, String) -> Unit
 ) {
-    // Inicia a aba com os valores que vieram da base de dados!
     var especieSelecionada by remember { mutableStateOf(initialEspecie) }
     var raioSelecionado by remember { mutableStateOf(initialRaio) }
 

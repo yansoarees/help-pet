@@ -50,6 +50,7 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:4.4.1")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
     implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

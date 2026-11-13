@@ -209,6 +209,25 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
     val textSecondary = colorResource(id = R.color.text_secondary)
     val context = LocalContext.current
 
+    // Limpeza Mágica para não mostrar "Desconhecido" dos testes antigos
+    val nomeLimpoTemp = animal.nome
+        .replace(" (Para Adoção)", "", ignoreCase = true)
+        .replace(" (Perdido)", "", ignoreCase = true)
+        .replace(" (Desaparecido)", "", ignoreCase = true)
+        .replace(" (Está comigo)", "", ignoreCase = true)
+        .replace(" (Avistei na rua)", "", ignoreCase = true)
+        .replace(" (Encontrado - Está comigo)", "", ignoreCase = true)
+        .replace(" (Encontrado - Avistei na rua)", "", ignoreCase = true)
+        .trim()
+
+    val nomeLimpo = if (nomeLimpoTemp.equals("Desconhecido", ignoreCase = true)) {
+        "${animal.especie} (Resgatado)"
+    } else if (nomeLimpoTemp.isEmpty()) {
+        "Sem Nome"
+    } else {
+        nomeLimpoTemp
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,7 +251,7 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
         Column {
             AsyncImage(
                 model = animal.fotoUrl.ifEmpty { "https://via.placeholder.com/600x400?text=Sem+Foto" },
-                contentDescription = animal.nome,
+                contentDescription = nomeLimpo,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,7 +261,7 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = animal.nome.replace(" (Para Adoção)", "").replace(" (Perdido)", "").replace(" (Está comigo)", "").replace(" (Avistei na rua)", "").ifEmpty { "Sem Nome" },
+                        text = nomeLimpo,
                         color = colorResource(id = R.color.text_primary),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -250,18 +269,18 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
                     )
 
                     val textoTag = when {
-                        animal.nome.contains("(Perdido)", ignoreCase = true) -> "Desaparecido"
-                        animal.nome.contains("(Para Adoção)", ignoreCase = true) -> "Para Adoção"
+                        animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true) -> "Desaparecido"
+                        animal.nome.contains("Para Adoção", ignoreCase = true) -> "Para Adoção"
                         else -> "Encontrado"
                     }
                     val corTagBg = when {
-                        animal.nome.contains("(Perdido)", ignoreCase = true) -> Color(0xFFFCE8E6)
-                        animal.nome.contains("(Para Adoção)", ignoreCase = true) -> Color(0xFFFEF7E0)
+                        textoTag == "Desaparecido" -> Color(0xFFFCE8E6)
+                        textoTag == "Para Adoção" -> Color(0xFFFEF7E0)
                         else -> Color(0xFFE6F4EA)
                     }
                     val corTagText = when {
-                        animal.nome.contains("(Perdido)", ignoreCase = true) -> Color(0xFFC53929)
-                        animal.nome.contains("(Para Adoção)", ignoreCase = true) -> Color(0xFFB06000)
+                        textoTag == "Desaparecido" -> Color(0xFFC53929)
+                        textoTag == "Para Adoção" -> Color(0xFFB06000)
                         else -> primaryGreen
                     }
 
@@ -271,23 +290,30 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
                         Text(text = textoTag, color = corTagText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(imageVector = Icons.Default.Share, contentDescription = "Partilhar", tint = textSecondary, modifier = Modifier.size(24.dp))
+                    // A pessoa precisa abrir os Detalhes para partilhar, por isso removi o ícone daqui para forçar a leitura!
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                val localizacao = if (animal.descricao.contains("Encontrado em:")) {
+                    animal.descricao.substringAfter("Encontrado em:").trim()
+                } else if (animal.descricao.contains("Visto em:")) {
+                    animal.descricao.substringAfter("Visto em:").substringBefore(".").trim()
+                } else {
+                    "Recife, PE"
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Local", tint = textSecondary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Recife, PE - Brasil", color = textSecondary, fontSize = 13.sp)
+                    Text(text = localizacao, color = textSecondary, fontSize = 13.sp)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AttributeBadge("Recente")
-                    if (animal.raca.isNotEmpty() && animal.raca != "Desconhecida") {
+                    if (animal.raca.isNotEmpty() && animal.raca != "Desconhecida" && animal.raca != "ND") {
                         AttributeBadge(animal.raca)
                     }
                 }

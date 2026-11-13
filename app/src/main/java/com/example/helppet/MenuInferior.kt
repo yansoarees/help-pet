@@ -72,7 +72,11 @@ fun MenuInferior(telaAtual: String, onAddClick: () -> Unit = {}) {
             BottomNavItem(
                 iconId = R.drawable.ic_nav_map, label = "Mapa", tint = corMapa, isBold = telaAtual == "Mapa",
                 modifier = Modifier.weight(1f).clickable {
-                    /* Futuro MapaActivity */
+                    if (telaAtual != "Mapa") {
+                        val intent = Intent(context, MapaActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        context.startActivity(intent)
+                    }
                 }
             )
 

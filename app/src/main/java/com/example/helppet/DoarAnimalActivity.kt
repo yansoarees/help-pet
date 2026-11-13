@@ -21,11 +21,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -55,11 +58,13 @@ class DoarAnimalActivity : ComponentActivity() {
 fun DoarAnimalScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val db = remember { FirebaseFirestore.getInstance() }
-    val auth = remember { FirebaseAuth.getInstance() } // <- Autenticação
+    val auth = remember { FirebaseAuth.getInstance() }
     val coroutineScope = rememberCoroutineScope()
 
     var nomePet by remember { mutableStateOf("") }
     var especie by remember { mutableStateOf("") }
+    // NOVO ESTADO: Guarda o texto quando a pessoa escolhe "Outro"
+    var especieOutroTexto by remember { mutableStateOf("") }
     var genero by remember { mutableStateOf("") }
     var raca by remember { mutableStateOf("") }
     var idade by remember { mutableStateOf("") }
@@ -93,10 +98,19 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
         Box(modifier = Modifier.fillMaxWidth().height(140.dp).drawBehind {
             drawRoundRect(color = if (fotoUri == null) Color(0xFF758A82) else primaryGreen, style = Stroke(width = 4f, pathEffect = dashPath), cornerRadius = CornerRadius(24f))
         }.clickable { photoPickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = if (fotoUri == null) Color.Unspecified else primaryGreen)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = if (fotoUri == null) "Adicionar foto" else "Foto adicionada pronta para envio!", color = if (fotoUri == null) Color(0xFF758A82) else primaryGreen, fontSize = 15.sp, fontWeight = if (fotoUri != null) FontWeight.Bold else FontWeight.Normal)
+            if (fotoUri != null) {
+                AsyncImage(
+                    model = fotoUri,
+                    contentDescription = "Foto selecionada",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().padding(2.dp).clip(RoundedCornerShape(8.dp))
+                )
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = Color(0xFF758A82))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Adicionar foto", color = Color(0xFF758A82), fontSize = 15.sp, fontWeight = FontWeight.Normal)
+                }
             }
         }
 
@@ -108,6 +122,19 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
             QuickChip("Cachorro", especie == "Cachorro") { especie = "Cachorro" }
             QuickChip("Gato", especie == "Gato") { especie = "Gato" }
             QuickChip("Outro", especie == "Outro") { especie = "Outro" }
+        }
+
+        // NOVO: Caixinha extra que só aparece se escolher "Outro"
+        if (especie == "Outro") {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = especieOutroTexto,
+                onValueChange = { especieOutroTexto = it },
+                placeholder = { Text("Qual é a espécie? (Ex: Coelho)", color = textHint) },
+                colors = customTextFieldColors(),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp)
+            )
         }
 
         LabelWithStar("Gênero ", isMandatory = true)
@@ -143,7 +170,10 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
 
         Button(
             onClick = {
-                if (nomePet.isEmpty() || especie.isEmpty() || genero.isEmpty() || idade.isEmpty() || vacinadoCastrado.isEmpty() || telefone.length < 10) {
+                // Valida a espécie correta (pega o texto se for "Outro")
+                val especieFinal = if (especie == "Outro") especieOutroTexto.trim() else especie
+
+                if (nomePet.isEmpty() || especieFinal.isEmpty() || genero.isEmpty() || idade.isEmpty() || vacinadoCastrado.isEmpty() || telefone.length < 10) {
                     Toast.makeText(context, "Por favor, preenche os campos obrigatórios!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
@@ -157,19 +187,19 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
                         else withContext(Dispatchers.Main) { Toast.makeText(context, "Aviso: Falha ao enviar a foto...", Toast.LENGTH_SHORT).show() }
                     }
 
-                    val userId = auth.currentUser?.uid ?: "" // <- Quem está a doar o pet
+                    val userId = auth.currentUser?.uid ?: ""
 
                     val petAdocao = Animal(
                         id = "",
                         nome = "$nomePet (Para Adoção)",
-                        especie = especie,
+                        especie = especieFinal, // Usa a espécie final validada
                         raca = raca.ifEmpty { "Sem raça definida" },
                         genero = genero,
                         idade = idade,
                         fotoUrl = linkDaFoto,
                         descricao = "Saúde: $vacinadoCastrado. $descricao",
                         telefoneContato = telefone,
-                        donoId = userId // <- Salva no Banco!
+                        donoId = userId
                     )
 
                     db.collection("animais").add(petAdocao)
