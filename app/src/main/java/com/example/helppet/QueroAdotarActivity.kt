@@ -289,9 +289,8 @@ fun QueroAdotarScreen(onBackClick: () -> Unit) {
                                     if (nome.contains("Para Adoção", ignoreCase = true)) {
 
                                         val matchEspecie = especieDesejada == "Qualquer" || especiePet.contains(especieDesejada, ignoreCase = true)
-                                        val matchPorte = racaOuPorte.contains(porteIdeal, ignoreCase = true)
-
-                                        if (matchEspecie && matchPorte) {
+                                        // O cadastro de adocao nao guarda o porte, entao filtramos so pela especie
+                                        if (matchEspecie) {
                                             Animal(
                                                 id = doc.id,
                                                 nome = nome,

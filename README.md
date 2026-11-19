@@ -25,7 +25,11 @@ O **HelpPet** é o meu projeto desenvolvido em Kotlin para a faculdade. A ideia 
 1. Clona o repositório no teu PC.
 2. Abre o projeto no **Android Studio**.
 3. Certifica-te de que o ficheiro `google-services.json` está na pasta `app/` (com as tuas credenciais do Firebase).
-4. Sincroniza o Gradle e clica em **Run** para testar no emulador ou num telemóvel físico.
+4. Adiciona a chave da API do ImgBB (upload de fotos) no ficheiro `local.properties` na raiz do projeto (este ficheiro não vai para o GitHub):
+   ```
+   IMGBB_API_KEY=a_tua_chave_aqui
+   ```
+5. Sincroniza o Gradle e clica em **Run** para testar no emulador ou num telemóvel físico.
 
 ---
 Feito com 💙 por Yan Gabriel  e Equipe.

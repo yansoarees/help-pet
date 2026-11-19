@@ -341,18 +341,21 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
                         val updates = hashMapOf<String, Any>(
                             "nome" to novoNome,
-                            "descricao" to "Encontrado em: $localizacao",
+                            "descricao" to "${petSel.descricao}\n\nEncontrado em: $localizacao".trim(),
                             "telefoneContato" to telefone,
                             "fotoUrl" to linkDaFoto
                         )
 
                         db.collection("animais").document(petSel.id).update(updates)
                             .addOnSuccessListener {
-                                NotificacaoHelper.enviarAlerta(
-                                    titulo = "Notícia sobre $nomeLimpo!",
-                                    mensagem = "O pet $nomeLimpo foi marcado como '$statusResgate' perto de $localizacao! Contacto: $telefone"
-
-                                )
+                                if (petSel.donoId.isNotEmpty()) {
+                                    // Alerta privado: so o dono do pet ve (inclui o contato de quem encontrou)
+                                    NotificacaoHelper.enviarAlerta(
+                                        titulo = "Notícia sobre $nomeLimpo!",
+                                        mensagem = "O pet $nomeLimpo foi marcado como '$statusResgate' perto de $localizacao! Contacto: $telefone",
+                                        destinatarioId = petSel.donoId
+                                    )
+                                }
                                 isLoading = false
                                 Toast.makeText(context, "Status atualizado! O pet foi retirado do mapa de buscas.", Toast.LENGTH_LONG).show()
                                 onBackClick()
@@ -577,7 +580,7 @@ private fun PhotoUploadBox(fotoUri: Uri?, primaryGreen: Color, onClick: () -> Un
 private suspend fun uploadImageToImgBBEncontrei(context: Context, imageUri: Uri): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val apiKey = "f6731151c6f72e4bc18b9ccfed8f032a"
+            val apiKey = BuildConfig.IMGBB_API_KEY
             val inputStream = context.contentResolver.openInputStream(imageUri)
             val bytes = inputStream?.readBytes()
             inputStream?.close()

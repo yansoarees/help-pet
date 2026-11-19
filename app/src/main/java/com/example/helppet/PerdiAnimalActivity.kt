@@ -234,7 +234,7 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 private suspend fun uploadImageToImgBBPerdi(context: Context, imageUri: Uri): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val apiKey = "f6731151c6f72e4bc18b9ccfed8f032a"
+            val apiKey = BuildConfig.IMGBB_API_KEY
             val inputStream = context.contentResolver.openInputStream(imageUri)
             val bytes = inputStream?.readBytes()
             inputStream?.close()

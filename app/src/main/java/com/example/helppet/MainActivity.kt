@@ -87,7 +87,12 @@ fun MainScreen() {
         animais
     } else {
         animais.filter { animal ->
-            animal.especie.equals(categoriaSelecionada.dropLast(1), ignoreCase = true)
+            when (categoriaSelecionada) {
+                "Cachorros" -> animal.especie.equals("Cachorro", ignoreCase = true)
+                "Gatos" -> animal.especie.equals("Gato", ignoreCase = true)
+                else -> !animal.especie.equals("Cachorro", ignoreCase = true) &&
+                        !animal.especie.equals("Gato", ignoreCase = true)
+            }
         }
     }
 
@@ -250,7 +255,7 @@ fun AnimalCardPremium(animal: Animal, primaryGreen: Color) {
     ) {
         Column {
             AsyncImage(
-                model = animal.fotoUrl.ifEmpty { "https://via.placeholder.com/600x400?text=Sem+Foto" },
+                model = animal.fotoUrl.ifEmpty { R.drawable.patalogo },
                 contentDescription = nomeLimpo,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

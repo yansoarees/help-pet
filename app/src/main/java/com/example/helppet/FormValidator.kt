@@ -4,7 +4,7 @@ object FormValidator {
 
 
     fun validarNomePet(nome: String): Boolean {
-        return nome.trim().isNotEmpty() && nome.trim().length >= 4
+        return nome.trim().isNotEmpty() && nome.trim().length >= 2
     }
 
 

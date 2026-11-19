@@ -24,6 +24,12 @@ class FormValidatorTest {
     }
 
     @Test
+    fun `quando o nome tem so uma letra, deve retornar falso`() {
+        val resultado = FormValidator.validarNomePet("R")
+        assertEquals(false, resultado)
+    }
+
+    @Test
     fun `quando o telefone tem menos de 9 digitos, deve retornar falso`() {
         val resultado = FormValidator.validarTelefone("12345")
         assertEquals(false, resultado)
