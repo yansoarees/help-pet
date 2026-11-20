@@ -16,7 +16,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
 
         val titulo = remoteMessage.notification?.title ?: "Novo Alerta HelpPet"
-        val mensagem = remoteMessage.notification?.body ?: "Há um novo animal na tua região!"
+        val mensagem = remoteMessage.notification?.body ?: "Há um novo animal na sua região!"
 
 
         mostrarNotificacao(titulo, mensagem)

@@ -88,7 +88,7 @@ fun EditarAnimalScreen(
     var especie by remember { mutableStateOf(especieAtual) }
     var raca by remember { mutableStateOf(racaAtual) }
     var descricao by remember { mutableStateOf(descricaoAtual) }
-    var telefone by remember { mutableStateOf(telefoneAtual) }
+    var telefone by remember { mutableStateOf(telefoneAtual.filter { it.isDigit() }.takeLast(11)) }
     var isLoading by remember { mutableStateOf(false) }
 
     val primaryGreen = colorResource(id = R.color.primary_green)
@@ -117,7 +117,7 @@ fun EditarAnimalScreen(
         OutlinedTextField(value = raca, onValueChange = { raca = it }, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryGreen, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
 
         Text("WhatsApp de Contato", fontWeight = FontWeight.Bold, color = textDark, modifier = Modifier.padding(bottom = 8.dp))
-        OutlinedTextField(value = telefone, onValueChange = { telefone = it }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryGreen, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+        CampoWhatsApp(valor = telefone, aoMudar = { telefone = it }, corDestaque = primaryGreen, preencherDoPerfil = false)
 
         Text("Descrição / História", fontWeight = FontWeight.Bold, color = textDark, modifier = Modifier.padding(bottom = 8.dp))
         OutlinedTextField(value = descricao, onValueChange = { descricao = it }, modifier = Modifier.fillMaxWidth().height(120.dp).padding(bottom = 32.dp), shape = RoundedCornerShape(12.dp), maxLines = 4, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryGreen, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))

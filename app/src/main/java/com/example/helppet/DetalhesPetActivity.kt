@@ -27,7 +27,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 class DetalhesPetActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,10 +75,14 @@ fun DetalhesPetScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val escopo = rememberCoroutineScope()
+    val primaryGreen = colorResource(id = R.color.primary_green)
+    val textDark = Color(0xFF1C2723)
 
-    val isAdocao = nome.contains("(Para Adoção)", ignoreCase = true)
-    val isPerdido = nome.contains("(Perdido)", ignoreCase = true) || nome.contains("(Desaparecido)", ignoreCase = true)
-    val nomeLimpo = nome
+    val statusPet = statusDoAnimal(Animal(nome = nome, descricao = descricao))
+    val isAdocao = statusPet == StatusPet.ADOCAO
+    val isPerdido = statusPet == StatusPet.PERDIDO
+    val nomeLimpoTemp = nome
         .replace(" (Para Adoção)", "", ignoreCase = true)
         .replace(" (Perdido)", "", ignoreCase = true)
         .replace(" (Desaparecido)", "", ignoreCase = true)
@@ -80,9 +91,14 @@ fun DetalhesPetScreen(
         .replace(" (Encontrado - Está comigo)", "", ignoreCase = true)
         .replace(" (Encontrado - Avistei na rua)", "", ignoreCase = true)
         .trim()
+    val nomeLimpo = when {
+        nomeLimpoTemp.equals("Desconhecido", ignoreCase = true) -> "$especie (Resgatado)"
+        nomeLimpoTemp.isEmpty() -> "Sem nome"
+        else -> nomeLimpoTemp
+    }
 
     val corTagBg = if (isPerdido) Color(0xFFFCE8E6) else if (isAdocao) Color(0xFFFEF7E0) else Color(0xFFE6F4EA)
-    val corTagTexto = if (isPerdido) Color(0xFFC53929) else if (isAdocao) Color(0xFFB06000) else Color(0xFF2E5A4A)
+    val corTagTexto = if (isPerdido) Color(0xFFC53929) else if (isAdocao) Color(0xFFB06000) else primaryGreen
     val textoTag = if (isPerdido) "Desaparecido" else if (isAdocao) "Para Adoção" else "Encontrado"
 
     val localizacao = if (descricao.contains("Encontrado em:")) {
@@ -93,34 +109,82 @@ fun DetalhesPetScreen(
         "Recife, PE"
     }
 
+    val informacoes = listOf(
+        "Espécie" to especie,
+        "Gênero" to genero,
+        "Raça" to raca,
+        "Idade" to idade
+    ).filter { (_, valor) -> valor.isNotBlank() && valor != "Desconhecida" && valor != "ND" }
+
+    val listaCaracteristicas = mutableListOf<String>()
+    val descLowerCase = descricao.lowercase()
+    if (descLowerCase.contains("vacinad") || descLowerCase.contains("saúde: ambos")) listaCaracteristicas.add("Vacinado")
+    if (descLowerCase.contains("castrad") || descLowerCase.contains("saúde: ambos")) listaCaracteristicas.add("Castrado")
+    if (descLowerCase.contains("mans") || descLowerCase.contains("dócil") || descLowerCase.contains("docil")) listaCaracteristicas.add("Dócil")
+    if (descLowerCase.contains("brincalh")) listaCaracteristicas.add("Brincalhão")
+    if (descLowerCase.contains("assustad") || descLowerCase.contains("medros")) listaCaracteristicas.add("Assustado")
+    if (descLowerCase.contains("coleira")) listaCaracteristicas.add("Com coleira")
+    if (descLowerCase.contains("machucad") || descLowerCase.contains("ferid")) listaCaracteristicas.add("Machucado")
+
     Scaffold(
         bottomBar = {
-            Surface(
-                color = Color(0xFFF5F7FF),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                shadowElevation = 8.dp
-            ) {
+            Surface(color = Color.White, shadowElevation = 12.dp) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
-                        text = if (isAdocao) "Interessado em adotar esse pet? Entre em contato via WhatsApp!" else "Tens informações sobre este pet? Entra em contacto!",
-                        color = Color(0xFF5E35B1),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        text = if (isAdocao) "Gostou do $nomeLimpo? Fale com quem está doando."
+                        else "Tem informações sobre este pet? Fale com quem publicou.",
+                        color = Color(0xFF757575),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { abrirWhatsApp(context, telefone, nomeLimpo) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(56.dp)
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_nav_pets), contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Entrar em contato", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                escopo.launch {
+                                    compartilharPetCompleto(
+                                        context,
+                                        Animal(
+                                            nome = nome, especie = especie, raca = raca, genero = genero,
+                                            idade = idade, fotoUrl = fotoUrl, descricao = descricao,
+                                            telefoneContato = telefone
+                                        )
+                                    )
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Share, contentDescription = "Compartilhar", tint = textDark)
+                        }
+                        Button(
+                            onClick = { abrirWhatsApp(context, telefone, nomeLimpo) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f).height(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                if (isAdocao) "Quero adotar" else "Falar no WhatsApp",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -130,127 +194,163 @@ fun DetalhesPetScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(bottom = paddingValues.calculateBottomPadding())
                 .verticalScroll(rememberScrollState())
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                AsyncImage(
-                    model = fotoUrl.ifEmpty { R.drawable.ic_launcher_background },
-                    contentDescription = "Foto de $nomeLimpo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = Color.White,
-                    modifier = Modifier
-                        .padding(start = 16.dp, top = 40.dp)
-                        .align(Alignment.TopStart)
-                        .clickable { onBackClick() },
-                    shadowElevation = 4.dp
-                ) {
-                    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(painter = painterResource(id = R.drawable.ic_arrow_seta), contentDescription = "Voltar", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Voltar", fontWeight = FontWeight.Bold)
+            Box(modifier = Modifier.fillMaxWidth().height(340.dp)) {
+                if (fotoUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = fotoUrl,
+                        contentDescription = "Foto de $nomeLimpo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(corTagBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Pets,
+                                contentDescription = null,
+                                tint = corTagTexto.copy(alpha = 0.45f),
+                                modifier = Modifier.size(96.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Sem foto", color = corTagTexto.copy(alpha = 0.7f), fontSize = 14.sp)
+                        }
                     }
                 }
 
-                Surface(
-                    shape = CircleShape,
-                    color = Color.White,
-                    shadowElevation = 4.dp,
+                Box(
                     modifier = Modifier
-                        .padding(end = 16.dp, top = 40.dp)
-                        .align(Alignment.TopEnd)
-                        .clickable { partilharPet(context, nomeLimpo, especie, localizacao, textoTag) }
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.30f), Color.Transparent)))
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier.padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Partilhar",
-                            modifier = Modifier.size(20.dp),
-                            tint = Color.Black
-                        )
-                    }
+                    BotaoCircular(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") { onBackClick() }
                 }
             }
 
-            Column(modifier = Modifier.padding(24.dp)) {
+            Column(
+                modifier = Modifier
+                    .offset(y = (-28).dp)
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = nomeLimpo, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C2723), modifier = Modifier.weight(1f))
+                    Text(
+                        text = nomeLimpo,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textDark,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Surface(shape = RoundedCornerShape(16.dp), color = corTagBg) {
-                        Text(text = textoTag, color = corTagTexto, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                        Text(
+                            text = textoTag,
+                            color = corTagTexto,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    InfoChipItem(especie)
-                    InfoChipItem(genero)
-                    InfoChipItem(raca.takeIf { it.isNotBlank() } ?: "ND")
-                    InfoChipItem(idade)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = corTagTexto, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = localizacao, color = Color.Gray, fontSize = 14.sp)
+                    Text(text = localizacao, color = Color(0xFF757575), fontSize = 14.sp)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                if (informacoes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    informacoes.chunked(2).forEach { linha ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        ) {
+                            linha.forEach { (rotulo, valor) ->
+                                InfoTile(rotulo = rotulo, valor = valor, modifier = Modifier.weight(1f))
+                            }
+                            if (linha.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
 
-                Text("Sobre", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C2723))
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Sobre", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textDark)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = descricao, color = Color.DarkGray, fontSize = 15.sp, lineHeight = 22.sp)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                val listaCaracteristicas = mutableListOf<String>()
-                val descLowerCase = descricao.lowercase()
-
-                if (descLowerCase.contains("vacinad")) listaCaracteristicas.add("Vacinado")
-                if (descLowerCase.contains("castrad")) listaCaracteristicas.add("Castrado")
-                if (descLowerCase.contains("mans") || descLowerCase.contains("dócil") || descLowerCase.contains("docil")) listaCaracteristicas.add("Dócil")
-                if (descLowerCase.contains("brincalh")) listaCaracteristicas.add("Brincalhão")
-                if (descLowerCase.contains("assustad") || descLowerCase.contains("medros")) listaCaracteristicas.add("Assustado")
-                if (descLowerCase.contains("coleira")) listaCaracteristicas.add("Com Coleira")
-                if (descLowerCase.contains("machucad") || descLowerCase.contains("ferid")) listaCaracteristicas.add("Machucado")
+                Text(
+                    text = descricao.ifBlank { "Sem descrição." },
+                    color = Color(0xFF4A5550),
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp
+                )
 
                 if (listaCaracteristicas.isNotEmpty()) {
-                    Text("Características Encontradas", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C2723))
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Características", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textDark)
                     Spacer(modifier = Modifier.height(12.dp))
-
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        listaCaracteristicas.forEach { tag ->
-                            CaracteristicaChip(tag)
-                        }
+                        listaCaracteristicas.forEach { tag -> CaracteristicaChip(tag) }
                     }
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
     }
 }
 
+@Composable
+private fun BotaoCircular(icone: ImageVector, descricao: String, onClick: () -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = Color.White,
+        shadowElevation = 4.dp,
+        modifier = Modifier.size(44.dp).clickable { onClick() }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(imageVector = icone, contentDescription = descricao, tint = Color(0xFF1C2723), modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+@Composable
+private fun InfoTile(rotulo: String, valor: String, modifier: Modifier = Modifier) {
+    Surface(color = Color(0xFFF4F7F5), shape = RoundedCornerShape(14.dp), modifier = modifier) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(rotulo, color = Color(0xFF8A938F), fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(valor, color = Color(0xFF1C2723), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+        }
+    }
+}
+
 fun abrirWhatsApp(context: Context, telefone: String, nomePet: String) {
+    abrirWhatsAppComMensagem(context, telefone, "Olá! Vi o anúncio do pet $nomePet no HelpPet e gostaria de conversar.")
+}
+
+fun abrirWhatsAppComMensagem(context: Context, telefone: String, mensagem: String) {
     try {
         val numeroLimpo = telefone.replace("\\D".toRegex(), "")
-        val mensagem = "Olá! Vi o anúncio do pet $nomePet no HelpPet e gostaria de falar contigo."
         val uri = Uri.parse("https://wa.me/55$numeroLimpo?text=${Uri.encode(mensagem)}")
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        context.startActivity(intent)
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
     } catch (e: Exception) {
         e.printStackTrace()
     }
@@ -272,7 +372,7 @@ fun partilharPet(context: Context, nome: String, especie: String, local: String,
         putExtra(Intent.EXTRA_TEXT, textoPartilha)
         type = "text/plain"
     }
-    val shareIntent = Intent.createChooser(sendIntent, "Partilhar pet via...")
+    val shareIntent = Intent.createChooser(sendIntent, "Compartilhar pet via...")
     context.startActivity(shareIntent)
 }
 

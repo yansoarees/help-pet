@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -68,7 +69,6 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
     var nomePet by remember { mutableStateOf("") }
     var especie by remember { mutableStateOf("") }
 
-    var especieOutroTexto by remember { mutableStateOf("") }
     var genero by remember { mutableStateOf("") }
     var raca by remember { mutableStateOf("") }
     var caracteristicas by remember { mutableStateOf("") }
@@ -76,10 +76,11 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
     var telefone by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    var viesFoto by remember { mutableStateOf(Offset.Zero) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            fotoUri = uri
+            fotoUri = uri; viesFoto = Offset.Zero;
             Toast.makeText(context, "Foto escolhida com sucesso!", Toast.LENGTH_SHORT).show()
         }
     }
@@ -100,55 +101,22 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Cadastrar Pet Perdido", color = accentRed, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(text = "Dá o máximo de detalhes possível para ajudar na busca.", color = textSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
+        Text(text = "Dê o máximo de detalhes possível para ajudar na busca.", color = textSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
 
         LabelWithStar("Foto nítida do pet ", isMandatory = true)
-        val dashPath = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)
-        Box(
-            modifier = Modifier.fillMaxWidth().height(140.dp).drawBehind {
-                drawRoundRect(color = if (fotoUri == null) Color(0xFF758A82) else accentRed, style = Stroke(width = 4f, pathEffect = dashPath), cornerRadius = CornerRadius(24f))
-            }.clickable { photoPickerLauncher.launch("image/*") },
-            contentAlignment = Alignment.Center
-        ) {
-
-            if (fotoUri != null) {
-                AsyncImage(
-                    model = fotoUri,
-                    contentDescription = "Foto selecionada",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().padding(2.dp).clip(RoundedCornerShape(8.dp)) // Padding para não cobrir a borda tracejada
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = Color(0xFF758A82))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "Adicionar foto", color = Color(0xFF758A82), fontSize = 15.sp, fontWeight = FontWeight.Normal)
-                }
-            }
-        }
+        CaixaFotoAjustavel(
+            fotoUri = fotoUri,
+            vies = viesFoto,
+            aoMudarVies = { viesFoto = it },
+            corDestaque = accentRed,
+            aoEscolher = { photoPickerLauncher.launch("image/*") }
+        )
 
         LabelWithStar("Nome do pet ", isMandatory = true)
         OutlinedTextField(value = nomePet, onValueChange = { nomePet = it }, placeholder = { Text("Ex: Bob", color = textHint) }, colors = customTextFieldColors(accentRed), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
 
         LabelWithStar("Espécie ", isMandatory = true)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickChip("Cachorro", especie == "Cachorro", accentRed) { especie = "Cachorro" }
-            QuickChip("Gato", especie == "Gato", accentRed) { especie = "Gato" }
-            QuickChip("Outro", especie == "Outro", accentRed) { especie = "Outro" }
-        }
-
-
-        if (especie == "Outro") {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = especieOutroTexto,
-                onValueChange = { especieOutroTexto = it },
-                placeholder = { Text("Qual é a espécie? (Ex: Coelho, Pássaro)", color = textHint) },
-                colors = customTextFieldColors(accentRed),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(60.dp)
-            )
-        }
+        SeletorEspecie(especie = especie, aoMudar = { especie = it }, corDestaque = accentRed)
 
         LabelWithStar("Gênero ", isMandatory = true)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -165,18 +133,18 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
         LabelWithStar("Onde foi visto por último? ", isMandatory = true)
         OutlinedTextField(value = localVisto, onValueChange = { localVisto = it }, placeholder = { Text("Bairro, Rua, Referência...", color = textHint) }, colors = customTextFieldColors(accentRed), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
 
-        LabelWithStar("Teu WhatsApp ", isMandatory = true)
-        OutlinedTextField(value = telefone, onValueChange = { newValue -> val digits = newValue.filter { it.isDigit() }; if (digits.length <= 11) telefone = digits }, placeholder = { Text("DDD + Número", color = textHint) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), colors = customTextFieldColors(accentRed), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
+        LabelWithStar("Seu WhatsApp ", isMandatory = true)
+        CampoWhatsApp(valor = telefone, aoMudar = { telefone = it }, corDestaque = accentRed)
 
         Spacer(modifier = Modifier.height(40.dp))
 
         Button(
             onClick = {
 
-                val especieFinal = if (especie == "Outro") especieOutroTexto.trim() else especie
+                val especieFinal = especie.trim()
 
                 if (!FormValidator.validarNomePet(nomePet) || !FormValidator.validarTelefone(telefone) || especieFinal.isEmpty() || genero.isEmpty() || caracteristicas.isEmpty() || localVisto.isEmpty()) {
-                    Toast.makeText(context, "Por favor, preenche os campos obrigatórios corretamente!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Por favor, preencha os campos obrigatórios corretamente!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
                 isLoading = true
@@ -184,7 +152,7 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
                 coroutineScope.launch {
                     var linkDaFoto = ""
                     if (fotoUri != null) {
-                        val urlUpload = uploadImageToImgBBPerdi(context, fotoUri!!)
+                        val urlUpload = uploadFotoRecortada(context, fotoUri!!, viesFoto)
                         if (urlUpload != null) linkDaFoto = urlUpload
                     }
 
@@ -210,7 +178,7 @@ fun PerdiAnimalScreen(onBackClick: () -> Unit) {
                                 mensagem = "$nomePet ($especieFinal) desapareceu perto de $localVisto. Viu este pet?"
                             )
                             isLoading = false
-                            Toast.makeText(context, "Pet reportado como perdido com sucesso!", Toast.LENGTH_LONG).show()
+                            abrirTelaPublicado(context, StatusPet.PERDIDO, nomePet.trim())
                             onBackClick()
                         }
                         .addOnFailureListener {
@@ -251,11 +219,7 @@ private suspend fun uploadImageToImgBBPerdi(context: Context, imageUri: Uri): St
 
 @Composable
 private fun QuickChip(text: String, isSelected: Boolean, activeColor: Color, onClick: () -> Unit) {
-    val bgColor = if (isSelected) activeColor else Color.White
-    val textColor = if (isSelected) Color.White else Color.DarkGray
-    Surface(shape = RoundedCornerShape(24.dp), color = bgColor, border = BorderStroke(1.dp, if (isSelected) activeColor else Color(0xFFBDBDBD)), modifier = Modifier.clickable { onClick() }) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) { Text(text = text, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-    }
+    PilulaOpcao(texto = text, selecionado = isSelected, corDestaque = activeColor, onClick = onClick)
 }
 
 @Composable

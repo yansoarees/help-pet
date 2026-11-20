@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -63,8 +64,6 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
 
     var nomePet by remember { mutableStateOf("") }
     var especie by remember { mutableStateOf("") }
-    // NOVO ESTADO: Guarda o texto quando a pessoa escolhe "Outro"
-    var especieOutroTexto by remember { mutableStateOf("") }
     var genero by remember { mutableStateOf("") }
     var raca by remember { mutableStateOf("") }
     var idade by remember { mutableStateOf("") }
@@ -73,9 +72,10 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
     var descricao by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    var viesFoto by remember { mutableStateOf(Offset.Zero) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) { fotoUri = uri; Toast.makeText(context, "Foto escolhida com sucesso!", Toast.LENGTH_SHORT).show() }
+        if (uri != null) { fotoUri = uri; viesFoto = Offset.Zero; Toast.makeText(context, "Foto escolhida com sucesso!", Toast.LENGTH_SHORT).show() }
     }
 
     val textDark = Color(0xFF1C2723)
@@ -91,51 +91,22 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Cadastrar Animal", color = primaryGreen, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(text = "Preenche os dados com carinho para ajudar este pet a encontrar a família perfeita.", color = textSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
+        Text(text = "Preencha os dados com carinho para ajudar este pet a encontrar a família perfeita.", color = textSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
 
         LabelWithStar("Foto bonita do pet ", isMandatory = true)
-        val dashPath = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)
-        Box(modifier = Modifier.fillMaxWidth().height(140.dp).drawBehind {
-            drawRoundRect(color = if (fotoUri == null) Color(0xFF758A82) else primaryGreen, style = Stroke(width = 4f, pathEffect = dashPath), cornerRadius = CornerRadius(24f))
-        }.clickable { photoPickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
-            if (fotoUri != null) {
-                AsyncImage(
-                    model = fotoUri,
-                    contentDescription = "Foto selecionada",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().padding(2.dp).clip(RoundedCornerShape(8.dp))
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(painter = painterResource(id = R.drawable.ic_camera_add), contentDescription = null, tint = Color(0xFF758A82))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "Adicionar foto", color = Color(0xFF758A82), fontSize = 15.sp, fontWeight = FontWeight.Normal)
-                }
-            }
-        }
+        CaixaFotoAjustavel(
+            fotoUri = fotoUri,
+            vies = viesFoto,
+            aoMudarVies = { viesFoto = it },
+            corDestaque = primaryGreen,
+            aoEscolher = { photoPickerLauncher.launch("image/*") }
+        )
 
         LabelWithStar("Nome do pet ", isMandatory = true)
         OutlinedTextField(value = nomePet, onValueChange = { nomePet = it }, placeholder = { Text("Ex: Bob", color = textHint) }, colors = customTextFieldColors(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
 
         LabelWithStar("Espécie ", isMandatory = true)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickChip("Cachorro", especie == "Cachorro") { especie = "Cachorro" }
-            QuickChip("Gato", especie == "Gato") { especie = "Gato" }
-            QuickChip("Outro", especie == "Outro") { especie = "Outro" }
-        }
-
-
-        if (especie == "Outro") {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = especieOutroTexto,
-                onValueChange = { especieOutroTexto = it },
-                placeholder = { Text("Qual é a espécie? (Ex: Coelho)", color = textHint) },
-                colors = customTextFieldColors(),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(60.dp)
-            )
-        }
+        SeletorEspecie(especie = especie, aoMudar = { especie = it }, corDestaque = primaryGreen)
 
         LabelWithStar("Gênero ", isMandatory = true)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -147,7 +118,7 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
         OutlinedTextField(value = raca, onValueChange = { raca = it }, placeholder = { Text("Ex: Vira-lata", color = textHint) }, colors = customTextFieldColors(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
 
         LabelWithStar("Idade aproximada ", isMandatory = true)
-        DropdownCampo(label = "Seleciona a idade...", options = listOf("Filhote (0 a 1 ano)", "Jovem (1 a 3 anos)", "Adulto (3 a 7 anos)", "Idoso (7+ anos)"), selected = idade) { idade = it }
+        DropdownCampo(label = "Selecione a idade...", options = listOf("Filhote (0 a 1 ano)", "Jovem (1 a 3 anos)", "Adulto (3 a 7 anos)", "Idoso (7+ anos)"), selected = idade) { idade = it }
 
         LabelWithStar("Saúde ", isMandatory = true)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -162,19 +133,19 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
         }
 
         LabelWithStar("WhatsApp para adoção ", isMandatory = true)
-        OutlinedTextField(value = telefone, onValueChange = { newValue -> val digits = newValue.filter { it.isDigit() }; if (digits.length <= 11) telefone = digits }, placeholder = { Text("DDD + Número", color = textHint) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), colors = customTextFieldColors(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(60.dp))
+        CampoWhatsApp(valor = telefone, aoMudar = { telefone = it }, corDestaque = primaryGreen)
 
         LabelWithStar("História do pet ", isMandatory = true)
-        OutlinedTextField(value = descricao, onValueChange = { descricao = it }, placeholder = { Text("É brincalhão? Dá-se bem com crianças?", color = textHint) }, colors = customTextFieldColors(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(120.dp), maxLines = 4)
+        OutlinedTextField(value = descricao, onValueChange = { descricao = it }, placeholder = { Text("É brincalhão? Se dá bem com crianças?", color = textHint) }, colors = customTextFieldColors(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(120.dp), maxLines = 4)
         Spacer(modifier = Modifier.height(40.dp))
 
         Button(
             onClick = {
 
-                val especieFinal = if (especie == "Outro") especieOutroTexto.trim() else especie
+                val especieFinal = especie.trim()
 
                 if (nomePet.isEmpty() || especieFinal.isEmpty() || genero.isEmpty() || idade.isEmpty() || vacinadoCastrado.isEmpty() || telefone.length < 10) {
-                    Toast.makeText(context, "Por favor, preenche os campos obrigatórios!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Por favor, preencha os campos obrigatórios!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
                 isLoading = true
@@ -182,7 +153,7 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
                 coroutineScope.launch {
                     var linkDaFoto = ""
                     if (fotoUri != null) {
-                        val urlUpload = uploadImageToImgBB(context, fotoUri!!)
+                        val urlUpload = uploadFotoRecortada(context, fotoUri!!, viesFoto)
                         if (urlUpload != null) linkDaFoto = urlUpload
                         else withContext(Dispatchers.Main) { Toast.makeText(context, "Aviso: Falha ao enviar a foto...", Toast.LENGTH_SHORT).show() }
                     }
@@ -205,7 +176,7 @@ fun DoarAnimalScreen(onBackClick: () -> Unit) {
                     db.collection("animais").add(petAdocao)
                         .addOnSuccessListener {
                             isLoading = false
-                            Toast.makeText(context, "Pet cadastrado para adoção com sucesso!", Toast.LENGTH_LONG).show()
+                            abrirTelaPublicado(context, StatusPet.ADOCAO, nomePet.trim())
                             onBackClick()
                         }
                         .addOnFailureListener {
@@ -246,12 +217,7 @@ suspend fun uploadImageToImgBB(context: Context, imageUri: Uri): String? {
 
 @Composable
 private fun QuickChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val primaryGreen = colorResource(id = R.color.primary_green)
-    val bgColor = if (isSelected) primaryGreen else Color.White
-    val textColor = if (isSelected) Color.White else Color.DarkGray
-    Surface(shape = RoundedCornerShape(24.dp), color = bgColor, border = BorderStroke(1.dp, if (isSelected) primaryGreen else Color(0xFFBDBDBD)), modifier = modifier.clickable { onClick() }) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) { Text(text = text, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-    }
+    PilulaOpcao(texto = text, selecionado = isSelected, corDestaque = colorResource(id = R.color.primary_green), modifier = modifier, onClick = onClick)
 }
 
 @Composable

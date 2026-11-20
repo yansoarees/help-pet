@@ -94,7 +94,7 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
         if (userId != null) {
             db.collection("usuarios").document(userId).get()
                 .addOnSuccessListener { doc ->
-                    userName = doc.getString("nome") ?: "Utilizador"
+                    userName = nomeDoUsuario(doc.getString("nome"))
                     savedAlertaEspecie = doc.getString("alertaEspecie") ?: "Qualquer"
                     savedAlertaRaio = doc.getString("alertaRaio") ?: "50 km"
                 }
@@ -176,7 +176,7 @@ fun PerfilScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
         } else if (meusAnimais.isEmpty()) {
             Surface(color = Color.White, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Ainda não tens nenhum pet cadastrado.",
+                    text = "Você ainda não tem nenhum pet cadastrado.",
                     color = textHint,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(24.dp)
@@ -376,8 +376,8 @@ fun MeuAnimalCard(animal: Animal, primaryGreen: Color, onEdit: () -> Unit, onDel
     }
 
     val textoTag = when {
-        animal.nome.contains("Para Adoção", ignoreCase = true) -> "Para Adoção"
-        animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true) -> "Desaparecido"
+        statusDoAnimal(animal) == StatusPet.ADOCAO -> "Para Adoção"
+        statusDoAnimal(animal) == StatusPet.PERDIDO -> "Desaparecido"
         else -> "Encontrado"
     }
 
@@ -397,7 +397,7 @@ fun MeuAnimalCard(animal: Animal, primaryGreen: Color, onEdit: () -> Unit, onDel
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Excluir Anúncio", fontWeight = FontWeight.Bold) },
-            text = { Text("Tens a certeza que queres excluir este anúncio permanentemente?") },
+            text = { Text("Tem certeza que deseja excluir este anúncio permanentemente?") },
             confirmButton = {
                 TextButton(onClick = { showDialog = false; onDelete() }) {
                     Text("Excluir", color = Color(0xFFC53929), fontWeight = FontWeight.Bold)

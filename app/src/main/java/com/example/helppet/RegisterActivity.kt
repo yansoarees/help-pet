@@ -1,5 +1,6 @@
 package com.example.helppet
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.widget.Toast
@@ -38,6 +39,13 @@ class RegisterActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 RegisterScreen(
+                    onContaCriada = {
+                        val intent = Intent(this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        startActivity(intent)
+                        finish()
+                    },
                     onBackToLogin = {
                         finish()
                     }
@@ -49,7 +57,7 @@ class RegisterActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(onBackToLogin: () -> Unit) {
+fun RegisterScreen(onBackToLogin: () -> Unit, onContaCriada: () -> Unit) {
     val context = LocalContext.current
 
 
@@ -65,6 +73,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
     var emailError by remember { mutableStateOf(false) }
     var phoneError by remember { mutableStateOf(false) }
     var passwordError by remember { mutableStateOf(false) }
+    var passwordErrorMsg by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
 
@@ -201,21 +210,22 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
                 ),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             )
-            if (passwordError) Text("A senha deve ter pelo menos 6 caracteres", color = Color.Red, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start).padding(top = 4.dp))
+            if (passwordError) Text(passwordErrorMsg, color = Color.Red, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start).padding(top = 4.dp))
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = {
                     if (name.isEmpty()) { nameError = true; return@Button }
-                    if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) { emailError = true; return@Button }
+                    if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) { emailError = true; return@Button }
                     if (phone.isEmpty() || phone.length < 8) { phoneError = true; return@Button }
-                    if (password.isEmpty() || password.length < 6) { passwordError = true; return@Button }
+                    val erroSenha = erroSenhaCadastro(password)
+                    if (erroSenha != null) { passwordErrorMsg = erroSenha; passwordError = true; return@Button }
 
                     isLoading = true
 
 
-                    auth.createUserWithEmailAndPassword(email, password)
+                    auth.createUserWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 val userId = auth.currentUser?.uid
@@ -228,17 +238,18 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
                                     db.collection("usuarios").document(userId).set(userMap)
                                         .addOnSuccessListener {
                                             isLoading = false
-                                            Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
-                                            onBackToLogin()
+                                            Toast.makeText(context, "Conta criada com sucesso! Bem-vindo(a)!", Toast.LENGTH_SHORT).show()
+                                            onContaCriada()
                                         }
                                         .addOnFailureListener {
                                             isLoading = false
-                                            Toast.makeText(context, "Conta criada, mas erro ao salvar dados.", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Conta criada! Não conseguimos salvar seu perfil, mas você já pode usar o app.", Toast.LENGTH_LONG).show()
+                                            onContaCriada()
                                         }
                                 }
                             } else {
                                 isLoading = false
-                                Toast.makeText(context, "Erro: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, mensagemErroAuth(task.exception), Toast.LENGTH_LONG).show()
                             }
                         }
                 },

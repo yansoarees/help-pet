@@ -1,6 +1,11 @@
 package com.example.helppet
 
 import android.os.Bundle
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.foundation.BorderStroke
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -33,29 +38,52 @@ data class Notificacao(
     val titulo: String = "",
     val mensagem: String = "",
     val destinatarioId: String = "TODOS",
+    val telefoneContato: String = "",
     val data: Long = System.currentTimeMillis()
 )
 
 object NotificacaoHelper {
 
-    fun enviarAlerta(titulo: String, mensagem: String, destinatarioId: String = "TODOS") {
+    fun enviarAlerta(titulo: String, mensagem: String, destinatarioId: String = "TODOS", telefoneContato: String = "") {
         val db = FirebaseFirestore.getInstance()
         val novaNotificacao = hashMapOf(
             "titulo" to titulo,
             "mensagem" to mensagem,
             "destinatarioId" to destinatarioId,
+            "telefoneContato" to telefoneContato,
             "data" to System.currentTimeMillis()
         )
         db.collection("notificacoes").add(novaNotificacao)
     }
 }
 
+object RegistroNotificacoes {
+    private fun chave() = "ultima_visita_notificacoes_" + (FirebaseAuth.getInstance().currentUser?.uid ?: "anonimo")
+
+    fun ultimaVisita(context: Context): Long =
+        context.getSharedPreferences("helppet_prefs", Context.MODE_PRIVATE).getLong(chave(), 0L)
+
+    fun marcarComoVistas(context: Context) {
+        context.getSharedPreferences("helppet_prefs", Context.MODE_PRIVATE)
+            .edit().putLong(chave(), System.currentTimeMillis()).apply()
+    }
+}
+
+fun telefoneDaNotificacao(notificacao: Notificacao): String {
+    if (notificacao.telefoneContato.isNotBlank()) return notificacao.telefoneContato.filter { it.isDigit() }
+    val achado = Regex("Conta(c)?to:\\s*([0-9 ()-]+)").find(notificacao.mensagem)
+    return achado?.groupValues?.get(2)?.filter { it.isDigit() }.orEmpty()
+}
+
 class NotificacoesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val visitaAnterior = RegistroNotificacoes.ultimaVisita(this)
+        RegistroNotificacoes.marcarComoVistas(this)
+
         setContent {
             MaterialTheme {
-                NotificacoesScreen(onBackClick = { finish() })
+                NotificacoesScreen(visitaAnterior = visitaAnterior, onBackClick = { finish() })
             }
         }
     }
@@ -63,7 +91,7 @@ class NotificacoesActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificacoesScreen(onBackClick: () -> Unit) {
+fun NotificacoesScreen(visitaAnterior: Long = 0L, onBackClick: () -> Unit) {
     val primaryGreen = colorResource(id = R.color.primary_green)
     val backgroundOffWhite = colorResource(id = R.color.background_offwhite)
 
@@ -71,38 +99,32 @@ fun NotificacoesScreen(onBackClick: () -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
 
     val db = remember { FirebaseFirestore.getInstance() }
-    val auth = remember { FirebaseAuth.getInstance() }
-    val meuUserId = auth.currentUser?.uid ?: ""
+    val meuUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
-    LaunchedEffect(Unit) {
-        db.collection("notificacoes")
+    DisposableEffect(Unit) {
+        val registro = db.collection("notificacoes")
             .orderBy("data", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     isLoading = false
                     return@addSnapshotListener
                 }
-
-
                 listaNotificacoes = snapshot.documents.mapNotNull { doc ->
-                    val notif = doc.toObject(Notificacao::class.java)?.copy(id = doc.id)
-                    if (notif != null && (notif.destinatarioId == "TODOS" || notif.destinatarioId == meuUserId)) {
-                        notif
-                    } else {
-                        null
-                    }
+                    doc.toObject(Notificacao::class.java)?.copy(id = doc.id)
+                        ?.takeIf { it.destinatarioId == "TODOS" || it.destinatarioId == meuUserId }
                 }
                 isLoading = false
             }
+        onDispose { registro.remove() }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Alertas HelpPet", fontWeight = FontWeight.Bold, color = primaryGreen) },
+                title = { Text("Notificações", fontWeight = FontWeight.Bold, color = primaryGreen) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = primaryGreen)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = primaryGreen)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundOffWhite)
@@ -110,92 +132,136 @@ fun NotificacoesScreen(onBackClick: () -> Unit) {
         },
         containerColor = backgroundOffWhite
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp)
-        ) {
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = primaryGreen)
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            when {
+                isLoading -> CircularProgressIndicator(color = primaryGreen, modifier = Modifier.align(Alignment.Center))
+                listaNotificacoes.isEmpty() -> Box(modifier = Modifier.align(Alignment.Center)) {
+                    EstadoVazio(
+                        titulo = "Nenhuma notificação ainda",
+                        mensagem = "Quando alguém encontrar o seu pet ou houver um alerta perto de você, ele aparece aqui.",
+                        textoBotao = null
+                    )
                 }
-            } else if (listaNotificacoes.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.LightGray
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Nenhum alerta até ao momento.", color = Color.Gray, fontSize = 16.sp)
-                    }
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
-                ) {
-                    items(listaNotificacoes) { notificacao ->
-                        NotificacaoCard(notificacao, primaryGreen)
-                    }
-                }
+                else -> ListaNotificacoes(listaNotificacoes, meuUserId, visitaAnterior)
             }
         }
     }
 }
 
 @Composable
-fun NotificacaoCard(notificacao: Notificacao, primaryGreen: Color) {
-    val formatador = remember { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()) }
+fun ListaNotificacoes(lista: List<Notificacao>, meuUserId: String, visitaAnterior: Long) {
+    val sobreMeuPet = lista.filter { it.destinatarioId == meuUserId && meuUserId.isNotEmpty() }
+    val comunidade = lista.filter { it.destinatarioId == "TODOS" }
+
+    LazyColumn(
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (sobreMeuPet.isNotEmpty()) {
+            item { TituloSecaoNotificacoes("SOBRE O SEU PET") }
+            items(sobreMeuPet, key = { it.id }) { notificacao ->
+                NotificacaoCard(notificacao, privada = true, nova = notificacao.data > visitaAnterior)
+            }
+        }
+        if (comunidade.isNotEmpty()) {
+            item { TituloSecaoNotificacoes("ALERTAS DA COMUNIDADE") }
+            items(comunidade, key = { it.id }) { notificacao ->
+                NotificacaoCard(notificacao, privada = false, nova = notificacao.data > visitaAnterior)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TituloSecaoNotificacoes(texto: String) {
+    Text(
+        texto,
+        color = Color(0xFF9E9E9E),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+    )
+}
+
+@Composable
+fun NotificacaoCard(notificacao: Notificacao, privada: Boolean, nova: Boolean) {
+    val context = LocalContext.current
+    val primaryGreen = colorResource(id = R.color.primary_green)
+    val formatador = remember { SimpleDateFormat("dd/MM 'às' HH:mm", Locale("pt", "BR")) }
     val dataFormatada = formatador.format(Date(notificacao.data))
+    val telefone = if (privada) telefoneDaNotificacao(notificacao) else ""
 
-
-    val corFundoIcone = if (notificacao.destinatarioId == "TODOS") Color(0xFFE6F4EA) else Color(0xFFFEF7E0)
-    val corIcone = if (notificacao.destinatarioId == "TODOS") primaryGreen else Color(0xFFB06000)
+    val corDestaque = if (privada) Color(0xFFB06000) else primaryGreen
+    val corFundoIcone = if (privada) Color(0xFFFEF7E0) else Color(0xFFE6F4EA)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = if (privada) BorderStroke(1.5.dp, Color(0xFFF2D58A)) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(corFundoIcone, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = Icons.Default.Notifications, contentDescription = null, tint = corIcone)
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier.size(44.dp).background(corFundoIcone, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = notificacao.titulo,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.Black,
-                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                    )
-                    Text(
-                        text = dataFormatada,
-                        fontSize = 12.sp,
-                        color = Color.Gray
+                    Icon(
+                        imageVector = if (privada) Icons.Filled.Pets else Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint = corDestaque,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = notificacao.mensagem, fontSize = 14.sp, color = Color.DarkGray)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = notificacao.titulo,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color(0xFF1C2723),
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (nova) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(color = Color(0xFFC53929), shape = RoundedCornerShape(8.dp)) {
+                                Text(
+                                    "Novo",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = notificacao.mensagem, fontSize = 14.sp, color = Color(0xFF4A5550), lineHeight = 20.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(text = dataFormatada, fontSize = 12.sp, color = Color(0xFF9E9E9E))
+                }
+            }
+
+            if (telefone.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        abrirWhatsAppComMensagem(
+                            context,
+                            telefone,
+                            "Olá! Recebi o aviso do HelpPet de que você encontrou o meu pet. Muito obrigado! Podemos combinar?"
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Falar com quem encontrou", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

@@ -38,7 +38,8 @@ class AnimaisActivity : ComponentActivity() {
             MaterialTheme {
                 AnimaisScreen(
                     onBackClick = { finish() },
-                    onHomeClick = { finish() }
+                    onHomeClick = { finish() },
+                    abaInicial = intent.getStringExtra("aba") ?: "Desaparecidos"
                 )
             }
         }
@@ -46,12 +47,12 @@ class AnimaisActivity : ComponentActivity() {
 }
 
 @Composable
-fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
+fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit, abaInicial: String = "Desaparecidos") {
     val backgroundColor = colorResource(id = R.color.background_offwhite)
     val context = LocalContext.current
     val db = remember { FirebaseFirestore.getInstance() }
 
-    var tabSelecionada by remember { mutableStateOf("Desaparecidos") }
+    var tabSelecionada by remember { mutableStateOf(abaInicial) }
     val abas = listOf("Desaparecidos", "Achados", "Adoção")
 
     var showAddMenu by remember { mutableStateOf(false) }
@@ -128,11 +129,13 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
                             .clickable { tabSelecionada = aba },
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val quantidade = listaAnimais.count { statusDoAnimal(it).aba == aba }
                         Text(
-                            text = aba,
+                            text = if (isLoading) aba else "$aba ($quantidade)",
                             color = if (tabSelecionada == aba) Color(0xFF2E5A4A) else Color(0xFF9E9E9E),
                             fontWeight = if (tabSelecionada == aba) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
+                            maxLines = 1,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
 
@@ -152,17 +155,7 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val listaFiltrada = listaAnimais.filter { animal ->
-                val isPerdido = animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true)
-                val isAdocao = animal.nome.contains("Para Adoção", ignoreCase = true)
-
-                when (tabSelecionada) {
-                    "Desaparecidos" -> isPerdido
-                    "Achados" -> animal.nome.contains("Encontrado", ignoreCase = true) || animal.nome.contains("Está comigo", ignoreCase = true) || animal.nome.contains("Avistei na rua", ignoreCase = true)
-                    "Adoção" -> isAdocao
-                    else -> true
-                }
-            }
+            val listaFiltrada = listaAnimais.filter { animal -> statusDoAnimal(animal).aba == tabSelecionada }
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -170,7 +163,16 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
                 }
             } else if (listaFiltrada.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nenhum pet encontrado nesta categoria.", color = Color(0xFF9E9E9E))
+                    EstadoVazio(
+                        titulo = when (tabSelecionada) {
+                            "Desaparecidos" -> "Nenhum pet desaparecido"
+                            "Achados" -> "Nenhum pet achado"
+                            else -> "Nenhum pet para adoção"
+                        },
+                        mensagem = if (tabSelecionada == "Desaparecidos") "Que bom! Nenhum pet está sumido agora." else "Ainda não há pets nesta categoria.",
+                        textoBotao = "Cadastrar um pet",
+                        onBotao = { showAddMenu = true }
+                    )
                 }
             } else {
                 LazyColumn(
@@ -185,35 +187,7 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
         }
 
         if (showAddMenu) {
-            val primaryGreen = colorResource(id = R.color.primary_green)
-            Dialog(onDismissRequest = { showAddMenu = false }) {
-                Surface(shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 8.dp) {
-                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("O que você deseja fazer?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryGreen)
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        ActionCard("Perdi um animal", R.drawable.ic_perdi_alert, Color(0xFFFCE8E6), Color(0xFFC53929)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, PerdiAnimalActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Encontrei um animal", R.drawable.ic_encontrei_pet, Color(0xFFE6F4EA), primaryGreen) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, EncontreiAnimalActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Quero adotar", R.drawable.ic_adotar, Color(0xFFFEF7E0), Color(0xFFB06000)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, QueroAdotarActivity::class.java))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ActionCard("Colocar para Adoção", R.drawable.ic_nav_pets, Color(0xFFF3E5F5), Color(0xFF6A1B9A)) {
-                            showAddMenu = false
-                            context.startActivity(Intent(context, DoarAnimalActivity::class.java))
-                        }
-                    }
-                }
-            }
+            MenuAdicionarPet(onDismiss = { showAddMenu = false })
         }
     }
 }
@@ -222,8 +196,9 @@ fun AnimaisScreen(onBackClick: () -> Unit, onHomeClick: () -> Unit) {
 fun AnimalItemListCardReal(animal: Animal) {
     val context = LocalContext.current
 
-    val isPerdido = animal.nome.contains("Perdido", ignoreCase = true) || animal.nome.contains("Desaparecido", ignoreCase = true)
-    val isAdocao = animal.nome.contains("Para Adoção", ignoreCase = true)
+    val status = statusDoAnimal(animal)
+    val isPerdido = status == StatusPet.PERDIDO
+    val isAdocao = status == StatusPet.ADOCAO
 
     val (corTag, textoTag) = when {
         isPerdido -> Color(0xFFD32F2F) to "Desaparecido"

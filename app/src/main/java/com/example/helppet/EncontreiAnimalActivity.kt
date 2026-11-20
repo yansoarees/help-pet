@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -74,13 +75,13 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
     var petPerdidoSelecionado by remember { mutableStateOf<Animal?>(null) }
 
     var especie by remember { mutableStateOf("") }
-    var especieOutroTexto by remember { mutableStateOf("") } // NOVO: Para capturar a espécie customizada
     var porte by remember { mutableStateOf("") }
     var corPrincipal by remember { mutableStateOf("") }
     var localizacao by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    var viesFoto by remember { mutableStateOf(Offset.Zero) }
 
     LaunchedEffect(Unit) {
         isLoadingPerdidos = true
@@ -88,7 +89,8 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
             .addOnSuccessListener { snapshot ->
                 val perdidos = snapshot.documents.mapNotNull { doc ->
                     val nome = doc.getString("nome") ?: ""
-                    if (nome.contains("Perdido", ignoreCase = true) || nome.contains("Desaparecido", ignoreCase = true)) {
+                    val ehPerdido = statusDoAnimal(Animal(nome = nome, descricao = doc.getString("descricao") ?: "")) == StatusPet.PERDIDO
+                    if (ehPerdido) {
                         Animal(
                             id = doc.id,
                             nome = nome,
@@ -114,6 +116,7 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
     val photoPickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             fotoUri = uri
+            viesFoto = Offset.Zero
             Toast.makeText(context, "Foto adicionada com sucesso!", Toast.LENGTH_SHORT).show()
         }
     }
@@ -140,49 +143,31 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
             Text("Alerta de Pet Encontrado", color = textDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
-        Text("Onde está o animal agora?", color = textDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SelectionCard(
-                text = "Está seguro\ncomigo",
-                isSelected = statusResgate == "Está comigo",
-                modifier = Modifier.weight(1f)
-            ) { statusResgate = "Está comigo" }
-
-            SelectionCard(
-                text = "Apenas avistei\nna rua",
-                isSelected = statusResgate == "Avistei na rua",
-                modifier = Modifier.weight(1f)
-            ) { statusResgate = "Avistei na rua" }
-        }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text("Como queres identificar o pet?", color = textDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SelectionCard(
-                text = "Tirar foto\n(Pet não listado)",
-                isSelected = modoIdentificacao == "foto",
-                modifier = Modifier.weight(1f)
-            ) {
-                modoIdentificacao = "foto"
-                petPerdidoSelecionado = null
-            }
-
-            SelectionCard(
-                text = "Selecionar Pet\n(Lista de Perdidos)",
-                isSelected = modoIdentificacao == "lista",
-                modifier = Modifier.weight(1f)
-            ) {
-                modoIdentificacao = "lista"
-            }
-        }
+        Text("Onde está o animal agora?", color = textDark, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        SeletorSegmentado(
+            opcoes = listOf("Está comigo" to "Está comigo", "Avistei na rua" to "Só avistei na rua"),
+            selecionado = statusResgate,
+            onSelecionar = { statusResgate = it }
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        Text("Como você quer identificar o pet?", color = textDark, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        SeletorSegmentado(
+            opcoes = listOf("foto" to "Tirar foto", "lista" to "Escolher da lista"),
+            selecionado = modoIdentificacao,
+            onSelecionar = { modo ->
+                modoIdentificacao = modo
+                if (modo == "foto") petPerdidoSelecionado = null
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         if (modoIdentificacao == "lista") {
-            LabelWithStar("Seleciona o pet desaparecido ", isMandatory = true)
+            LabelWithStar("Selecione o pet desaparecido ", isMandatory = true)
 
             if (isLoadingPerdidos) {
                 Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -202,7 +187,7 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                         Text("Nenhum pet cadastrado como perdido no momento.", color = Color.Gray, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Usar modo de Tirar Foto",
+                            text = "Usar o modo Tirar foto",
                             color = primaryGreen,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable { modoIdentificacao = "foto" }
@@ -227,34 +212,27 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
             LabelWithStar("Foto atual do animal (Opcional)", isMandatory = false)
-            PhotoUploadBox(fotoUri = fotoUri, primaryGreen = primaryGreen) {
-                photoPickerLauncher.launch("image/*")
-            }
+            CaixaFotoAjustavel(
+                fotoUri = fotoUri,
+                vies = viesFoto,
+                aoMudarVies = { viesFoto = it },
+                corDestaque = primaryGreen,
+                aoEscolher = { photoPickerLauncher.launch("image/*") },
+                textoVazio = "Adicionar foto do animal"
+            )
         } else {
             LabelWithStar("Foto do animal ", isMandatory = true)
-            PhotoUploadBox(fotoUri = fotoUri, primaryGreen = primaryGreen) {
-                photoPickerLauncher.launch("image/*")
-            }
+            CaixaFotoAjustavel(
+                fotoUri = fotoUri,
+                vies = viesFoto,
+                aoMudarVies = { viesFoto = it },
+                corDestaque = primaryGreen,
+                aoEscolher = { photoPickerLauncher.launch("image/*") },
+                textoVazio = "Adicionar foto do animal"
+            )
 
             LabelWithStar("Espécie ", isMandatory = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickChip("Cachorro", especie == "Cachorro") { especie = "Cachorro" }
-                QuickChip("Gato", especie == "Gato") { especie = "Gato" }
-                QuickChip("Outro", especie == "Outro") { especie = "Outro" }
-            }
-
-
-            if (especie == "Outro") {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = especieOutroTexto,
-                    onValueChange = { especieOutroTexto = it },
-                    placeholder = { Text("Qual é a espécie? (Ex: Coelho, Pássaro)", color = textHint) },
-                    colors = customTextFieldColors(),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(60.dp)
-                )
-            }
+            SeletorEspecie(especie = especie, aoMudar = { especie = it }, corDestaque = primaryGreen)
 
             LabelWithStar("Porte ", isMandatory = true)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -285,39 +263,28 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
             maxLines = 3
         )
 
-        LabelWithStar("O teu WhatsApp ", isMandatory = true)
-        OutlinedTextField(
-            value = telefone,
-            onValueChange = { newValue ->
-                val digits = newValue.filter { it.isDigit() }
-                if (digits.length <= 11) telefone = digits
-            },
-            placeholder = { Text("DDD + Número", color = textHint) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            colors = customTextFieldColors(),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth().height(60.dp)
-        )
+        LabelWithStar("Seu WhatsApp ", isMandatory = true)
+        CampoWhatsApp(valor = telefone, aoMudar = { telefone = it }, corDestaque = primaryGreen)
 
         Spacer(modifier = Modifier.height(40.dp))
 
         Button(
             onClick = {
 
-                val especieFinal = if (modoIdentificacao == "foto" && especie == "Outro") especieOutroTexto.trim() else especie
+                val especieFinal = especie.trim()
 
                 if (modoIdentificacao == "lista") {
                     if (petPerdidoSelecionado == null) {
-                        Toast.makeText(context, "Seleciona qual pet da lista encontraste!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Selecione qual pet da lista você encontrou!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     if (localizacao.isEmpty() || !FormValidator.validarTelefone(telefone)) {
-                        Toast.makeText(context, "Preenche o local onde encontraste e um WhatsApp válido!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Preencha o local onde você encontrou o pet e um WhatsApp válido!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                 } else {
                     if (especieFinal.isEmpty() || porte.isEmpty() || corPrincipal.isEmpty() || localizacao.isEmpty() || !FormValidator.validarTelefone(telefone)) {
-                        Toast.makeText(context, "Por favor, preenche as informações rápidas e um telefone válido!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Por favor, preencha as informações e um telefone válido!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                 }
@@ -327,7 +294,7 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                 coroutineScope.launch {
                     var linkDaFoto = petPerdidoSelecionado?.fotoUrl ?: ""
                     if (fotoUri != null) {
-                        val urlUpload = uploadImageToImgBBEncontrei(context, fotoUri!!)
+                        val urlUpload = uploadFotoRecortada(context, fotoUri!!, viesFoto)
                         if (urlUpload != null) linkDaFoto = urlUpload
                     }
 
@@ -341,20 +308,23 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
 
                         val updates = hashMapOf<String, Any>(
                             "nome" to novoNome,
-                            "descricao" to "Encontrado em: $localizacao",
+                            "descricao" to "${petSel.descricao}\n\nEncontrado em: $localizacao".trim(),
                             "telefoneContato" to telefone,
                             "fotoUrl" to linkDaFoto
                         )
 
                         db.collection("animais").document(petSel.id).update(updates)
                             .addOnSuccessListener {
-                                NotificacaoHelper.enviarAlerta(
-                                    titulo = "Notícia sobre $nomeLimpo!",
-                                    mensagem = "O pet $nomeLimpo foi marcado como '$statusResgate' perto de $localizacao! Contacto: $telefone"
-
-                                )
+                                if (petSel.donoId.isNotEmpty()) {
+                                    NotificacaoHelper.enviarAlerta(
+                                        titulo = "Notícia sobre $nomeLimpo!",
+                                        mensagem = "O pet $nomeLimpo foi marcado como '$statusResgate' perto de $localizacao! Contato: $telefone",
+                                        destinatarioId = petSel.donoId,
+                                        telefoneContato = telefone
+                                    )
+                                }
                                 isLoading = false
-                                Toast.makeText(context, "Status atualizado! O pet foi retirado do mapa de buscas.", Toast.LENGTH_LONG).show()
+                                abrirTelaPublicado(context, StatusPet.ENCONTRADO, nomeLimpo, avisouDono = true)
                                 onBackClick()
                             }
                             .addOnFailureListener {
@@ -384,7 +354,7 @@ fun EncontreiAnimalScreen(onBackClick: () -> Unit) {
                                     mensagem = "$especieFinal ($corPrincipal, porte $porte) visto em: $localizacao."
                                 )
                                 isLoading = false
-                                Toast.makeText(context, "Alerta enviado! Obrigado por ajudares.", Toast.LENGTH_LONG).show()
+                                abrirTelaPublicado(context, StatusPet.ENCONTRADO, "$especieFinal $corPrincipal".trim())
                                 onBackClick()
                             }
                             .addOnFailureListener {
@@ -604,12 +574,7 @@ private fun SelectionCard(text: String, isSelected: Boolean, modifier: Modifier 
 
 @Composable
 private fun QuickChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    val primaryGreen = colorResource(id = R.color.primary_green)
-    val bgColor = if (isSelected) primaryGreen else Color.White
-    val textColor = if (isSelected) Color.White else Color.DarkGray
-    Surface(shape = RoundedCornerShape(24.dp), color = bgColor, border = BorderStroke(1.dp, if (isSelected) primaryGreen else Color(0xFFBDBDBD)), modifier = Modifier.clickable { onClick() }) {
-        Text(text = text, color = textColor, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
-    }
+    PilulaOpcao(texto = text, selecionado = isSelected, corDestaque = colorResource(id = R.color.primary_green), onClick = onClick)
 }
 
 @Composable
